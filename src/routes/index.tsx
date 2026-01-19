@@ -593,7 +593,7 @@ function App() {
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden">
       {/* Left Sidebar */}
-      <aside className="w-72 flex-shrink-0 border-r border-white/10 bg-[#141414] flex flex-col">
+      <aside className="w-72 shrink-0 border-r border-white/10 bg-[#141414] flex flex-col">
         <div className="p-4 border-b border-white/10">
           <h1 className="text-lg font-semibold">App Store Editor</h1>
           <p className="text-xs text-gray-400 mt-1">
