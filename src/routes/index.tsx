@@ -41,6 +41,15 @@ type GradientPreset = {
   to: string;
 };
 
+type ImageOverlay = {
+  id: string;
+  src: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 type Screenshot = {
   id: string;
   headline: string;
@@ -57,6 +66,7 @@ type Screenshot = {
   subheadlineY: number;
   subheadlineWidth: number;
   fontFamily: string;
+  overlayImages: ImageOverlay[];
 };
 
 type FontOption = {
@@ -210,14 +220,17 @@ function App() {
       subheadlineY: 22,
       subheadlineWidth: 90,
       fontFamily: "inter",
+      overlayImages: [],
     },
   ]);
-  const [selectedTextElement, setSelectedTextElement] = useState<
-    "headline" | "subheadline" | null
-  >(null);
-  const [isDraggingText, setIsDraggingText] = useState(false);
+  const [selectedElement, setSelectedElement] = useState<{
+    type: "headline" | "subheadline" | "image";
+    imageId?: string;
+  } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
-  const dragStartTextPos = useRef({ x: 0, y: 0 });
+  const dragStartElementPos = useRef({ x: 0, y: 0 });
+  const overlayImageInputRef = useRef<HTMLInputElement>(null);
   const [activeScreenshotId, setActiveScreenshotId] = useState(
     screenshots[0].id,
   );
@@ -266,6 +279,7 @@ function App() {
       subheadlineY: 22,
       subheadlineWidth: 90,
       fontFamily: "inter",
+      overlayImages: [],
     };
     setScreenshots((prev) => [...prev, newScreenshot]);
     setActiveScreenshotId(newScreenshot.id);
@@ -278,28 +292,42 @@ function App() {
       : `'${fontOptions[0].value}', sans-serif`;
   };
 
-  const handleTextMouseDown = (
+  const handleElementMouseDown = (
     e: React.MouseEvent,
-    element: "headline" | "subheadline",
+    elementType: "headline" | "subheadline" | "image",
+    imageId?: string,
   ) => {
+    e.preventDefault();
     e.stopPropagation();
-    setSelectedTextElement(element);
-    setIsDraggingText(true);
+    setSelectedElement({ type: elementType, imageId });
+    setIsDragging(true);
     dragStartPos.current = { x: e.clientX, y: e.clientY };
-    dragStartTextPos.current = {
-      x:
-        element === "headline"
-          ? activeScreenshot.headlineX
-          : activeScreenshot.subheadlineX,
-      y:
-        element === "headline"
-          ? activeScreenshot.headlineY
-          : activeScreenshot.subheadlineY,
-    };
+
+    if (elementType === "headline") {
+      dragStartElementPos.current = {
+        x: activeScreenshot.headlineX,
+        y: activeScreenshot.headlineY,
+      };
+    } else if (elementType === "subheadline") {
+      dragStartElementPos.current = {
+        x: activeScreenshot.subheadlineX,
+        y: activeScreenshot.subheadlineY,
+      };
+    } else if (elementType === "image" && imageId) {
+      const image = activeScreenshot.overlayImages.find(
+        (img) => img.id === imageId,
+      );
+      if (image) {
+        dragStartElementPos.current = { x: image.x, y: image.y };
+      }
+    }
   };
 
-  const handleTextMouseMove = (e: React.MouseEvent, containerRect: DOMRect) => {
-    if (!isDraggingText || !selectedTextElement) return;
+  const handleElementMouseMove = (
+    e: React.MouseEvent,
+    containerRect: DOMRect,
+  ) => {
+    if (!isDragging || !selectedElement) return;
 
     const deltaX =
       ((e.clientX - dragStartPos.current.x) / containerRect.width) * 100;
@@ -308,22 +336,123 @@ function App() {
 
     const newX = Math.max(
       0,
-      Math.min(100, dragStartTextPos.current.x + deltaX),
+      Math.min(100, dragStartElementPos.current.x + deltaX),
     );
     const newY = Math.max(
       0,
-      Math.min(100, dragStartTextPos.current.y + deltaY),
+      Math.min(100, dragStartElementPos.current.y + deltaY),
     );
 
-    if (selectedTextElement === "headline") {
+    if (selectedElement.type === "headline") {
       updateActiveScreenshot({ headlineX: newX, headlineY: newY });
-    } else {
+    } else if (selectedElement.type === "subheadline") {
       updateActiveScreenshot({ subheadlineX: newX, subheadlineY: newY });
+    } else if (selectedElement.type === "image" && selectedElement.imageId) {
+      const updatedImages = activeScreenshot.overlayImages.map((img) =>
+        img.id === selectedElement.imageId ? { ...img, x: newX, y: newY } : img,
+      );
+      updateActiveScreenshot({ overlayImages: updatedImages });
     }
   };
 
-  const handleTextMouseUp = () => {
-    setIsDraggingText(false);
+  const handleElementMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const addOverlayImage = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        const img = new Image();
+        img.onload = () => {
+          const aspectRatio = img.width / img.height;
+          const newImage: ImageOverlay = {
+            id: generateId(),
+            src: result,
+            x: 50,
+            y: 50,
+            width: 20,
+            height: 20 / aspectRatio,
+          };
+          updateActiveScreenshot({
+            overlayImages: [...activeScreenshot.overlayImages, newImage],
+          });
+          setSelectedElement({ type: "image", imageId: newImage.id });
+        };
+        img.src = result;
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeOverlayImage = (imageId: string) => {
+    const updatedImages = activeScreenshot.overlayImages.filter(
+      (img) => img.id !== imageId,
+    );
+    updateActiveScreenshot({ overlayImages: updatedImages });
+    if (selectedElement?.imageId === imageId) {
+      setSelectedElement(null);
+    }
+  };
+
+  const updateOverlayImageSize = (imageId: string, width: number) => {
+    const image = activeScreenshot.overlayImages.find(
+      (img) => img.id === imageId,
+    );
+    if (image) {
+      const img = new Image();
+      img.onload = () => {
+        const aspectRatio = img.width / img.height;
+        const updatedImages = activeScreenshot.overlayImages.map((i) =>
+          i.id === imageId ? { ...i, width, height: width / aspectRatio } : i,
+        );
+        updateActiveScreenshot({ overlayImages: updatedImages });
+      };
+      img.src = image.src;
+    }
+  };
+
+  const bringImageForward = (imageId: string) => {
+    const images = [...activeScreenshot.overlayImages];
+    const index = images.findIndex((img) => img.id === imageId);
+    if (index < images.length - 1) {
+      const temp = images[index];
+      images[index] = images[index + 1];
+      images[index + 1] = temp;
+      updateActiveScreenshot({ overlayImages: images });
+    }
+  };
+
+  const sendImageBackward = (imageId: string) => {
+    const images = [...activeScreenshot.overlayImages];
+    const index = images.findIndex((img) => img.id === imageId);
+    if (index > 0) {
+      const temp = images[index];
+      images[index] = images[index - 1];
+      images[index - 1] = temp;
+      updateActiveScreenshot({ overlayImages: images });
+    }
+  };
+
+  const bringImageToFront = (imageId: string) => {
+    const images = [...activeScreenshot.overlayImages];
+    const index = images.findIndex((img) => img.id === imageId);
+    if (index < images.length - 1) {
+      const [image] = images.splice(index, 1);
+      images.push(image);
+      updateActiveScreenshot({ overlayImages: images });
+    }
+  };
+
+  const sendImageToBack = (imageId: string) => {
+    const images = [...activeScreenshot.overlayImages];
+    const index = images.findIndex((img) => img.id === imageId);
+    if (index > 0) {
+      const [image] = images.splice(index, 1);
+      images.unshift(image);
+      updateActiveScreenshot({ overlayImages: images });
+    }
   };
 
   const removeScreenshot = (id: string) => {
@@ -359,6 +488,9 @@ function App() {
   };
 
   const handleExport = async () => {
+    // Wait for fonts to be loaded before exporting
+    await document.fonts.ready;
+
     for (const screenshot of screenshots) {
       const canvas = document.createElement("canvas");
       canvas.width = exportSize.width;
@@ -366,11 +498,9 @@ function App() {
       const ctx = canvas.getContext("2d");
       if (!ctx) continue;
 
-      // Scale factor: the preview divides font sizes by 3, so export multiplies by 3
-      // But we also need to account for the actual export resolution
-      // Base reference: 1290x2796 is the standard, preview shows at ~1/3 scale visually
-      const baseWidth = 1290;
-      const scale = canvas.width / baseWidth;
+      // Calculate scale: preview width is approximately canvas.width / 3
+      // because preview uses fontSize/3 and displays at roughly 1/3 size
+      const exportScale = canvas.width / 1290;
 
       // Draw background
       if (screenshot.backgroundMode === "gradient") {
@@ -392,71 +522,109 @@ function App() {
         fontOptions[0];
       const fontFamily = `'${fontOption.value}', sans-serif`;
 
-      // Font sizes - multiply by scale to match preview appearance
-      const exportHeadlineFontSize = headlineFontSize * scale;
-      const exportSubheadlineFontSize = subheadlineFontSize * scale;
+      // Font sizes - use the full font size, scaled for export resolution
+      const exportHeadlineFontSize = headlineFontSize * exportScale;
+      const exportSubheadlineFontSize = subheadlineFontSize * exportScale;
       const lineHeight = 1.1;
 
-      // Calculate text widths
+      // Text max widths based on percentage (same as preview)
+      // The preview uses width as percentage, and we need to match that exactly
       const headlineMaxWidth = canvas.width * (screenshot.headlineWidth / 100);
       const subheadlineMaxWidth =
         canvas.width * (screenshot.subheadlineWidth / 100);
 
-      // Draw headline with word wrapping
+      // Word wrap function that respects max width - matches CSS behavior
+      const wrapText = (text: string, maxWidth: number): string[] => {
+        const lines: string[] = [];
+        // First split by explicit newlines
+        const paragraphs = text.split("\n");
+
+        for (const paragraph of paragraphs) {
+          if (paragraph === "") {
+            lines.push("");
+            continue;
+          }
+
+          const words = paragraph.split(" ");
+          let currentLine = "";
+
+          for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const metrics = ctx.measureText(testLine);
+
+            if (metrics.width > maxWidth && currentLine) {
+              lines.push(currentLine);
+              currentLine = word;
+            } else {
+              currentLine = testLine;
+            }
+          }
+
+          if (currentLine) {
+            lines.push(currentLine);
+          }
+        }
+
+        return lines;
+      };
+
+      // Draw headline
       ctx.fillStyle = screenshot.textColor;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      ctx.font = `700 ${exportHeadlineFontSize}px ${fontFamily}`;
+
       const headlineX = canvas.width * (screenshot.headlineX / 100);
       let headlineTextY = canvas.height * (screenshot.headlineY / 100);
 
-      const headlineLines = screenshot.headline.split("\n");
+      // Set font before wrapping to ensure correct measurement
+      const headlineFont = `700 ${exportHeadlineFontSize}px ${fontFamily}`;
+      ctx.font = headlineFont;
+
+      const headlineLines = wrapText(screenshot.headline, headlineMaxWidth);
+
       headlineLines.forEach((line) => {
-        // Word wrap within max width
-        const words = line.split(" ");
-        let currentLine = "";
-        words.forEach((word, i) => {
-          const testLine = currentLine + (currentLine ? " " : "") + word;
-          const metrics = ctx.measureText(testLine);
-          if (metrics.width > headlineMaxWidth && currentLine) {
-            ctx.fillText(currentLine, headlineX, headlineTextY);
-            headlineTextY += exportHeadlineFontSize * lineHeight;
-            currentLine = word;
-          } else {
-            currentLine = testLine;
-          }
-          if (i === words.length - 1 && currentLine) {
-            ctx.fillText(currentLine, headlineX, headlineTextY);
-            headlineTextY += exportHeadlineFontSize * lineHeight;
-          }
-        });
+        ctx.fillText(line, headlineX, headlineTextY);
+        headlineTextY += exportHeadlineFontSize * lineHeight;
       });
 
-      // Draw subheadline with word wrapping
-      ctx.font = `600 ${exportSubheadlineFontSize}px ${fontFamily}`;
+      // Draw subheadline
       const subheadlineX = canvas.width * (screenshot.subheadlineX / 100);
       let subheadlineTextY = canvas.height * (screenshot.subheadlineY / 100);
 
-      const subheadlineLines = screenshot.subheadline.split("\n");
+      // Set font before wrapping to ensure correct measurement
+      const subheadlineFont = `600 ${exportSubheadlineFontSize}px ${fontFamily}`;
+      ctx.font = subheadlineFont;
+
+      const subheadlineLines = wrapText(
+        screenshot.subheadline,
+        subheadlineMaxWidth,
+      );
+
       subheadlineLines.forEach((line) => {
-        const words = line.split(" ");
-        let currentLine = "";
-        words.forEach((word, i) => {
-          const testLine = currentLine + (currentLine ? " " : "") + word;
-          const metrics = ctx.measureText(testLine);
-          if (metrics.width > subheadlineMaxWidth && currentLine) {
-            ctx.fillText(currentLine, subheadlineX, subheadlineTextY);
-            subheadlineTextY += exportSubheadlineFontSize * lineHeight;
-            currentLine = word;
-          } else {
-            currentLine = testLine;
-          }
-          if (i === words.length - 1 && currentLine) {
-            ctx.fillText(currentLine, subheadlineX, subheadlineTextY);
-            subheadlineTextY += exportSubheadlineFontSize * lineHeight;
-          }
-        });
+        ctx.fillText(line, subheadlineX, subheadlineTextY);
+        subheadlineTextY += exportSubheadlineFontSize * lineHeight;
       });
+
+      // Draw overlay images
+      for (const overlayImg of screenshot.overlayImages) {
+        const img = new Image();
+        await new Promise<void>((resolve) => {
+          img.onload = () => {
+            const imgX =
+              canvas.width * (overlayImg.x / 100) -
+              (canvas.width * (overlayImg.width / 100)) / 2;
+            const imgY =
+              canvas.height * (overlayImg.y / 100) -
+              (canvas.height * (overlayImg.height / 100)) / 2;
+            const imgWidth = canvas.width * (overlayImg.width / 100);
+            const imgHeight = canvas.height * (overlayImg.height / 100);
+            ctx.drawImage(img, imgX, imgY, imgWidth, imgHeight);
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = overlayImg.src;
+        });
+      }
 
       // Draw device - use same percentage-based positioning as preview
       const deviceWidthPx = canvas.width * (deviceScale / 100);
@@ -476,8 +644,8 @@ function App() {
       // Draw device frame with shadow
       ctx.save();
       ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-      ctx.shadowBlur = 50 * scale;
-      ctx.shadowOffsetY = 25 * scale;
+      ctx.shadowBlur = 50 * exportScale;
+      ctx.shadowOffsetY = 25 * exportScale;
       ctx.fillStyle = selectedColor.frame;
       ctx.beginPath();
       ctx.roundRect(
@@ -574,8 +742,8 @@ function App() {
         ctx.roundRect(notchX, notchY, notchWidth, notchHeight, [
           0,
           0,
-          20 * scale,
-          20 * scale,
+          20 * exportScale,
+          20 * exportScale,
         ]);
         ctx.fill();
       }
@@ -778,26 +946,29 @@ function App() {
             {screenshots.map((screenshot) => (
               <div
                 key={screenshot.id}
-                onClick={() => {
-                  setActiveScreenshotId(screenshot.id);
-                  setSelectedTextElement(null);
+                onClick={(e) => {
+                  if (activeScreenshotId !== screenshot.id) {
+                    setActiveScreenshotId(screenshot.id);
+                    setSelectedElement(null);
+                  }
                 }}
                 onMouseMove={(e) => {
                   if (activeScreenshotId === screenshot.id) {
                     const rect = e.currentTarget.getBoundingClientRect();
-                    handleTextMouseMove(e, rect);
+                    handleElementMouseMove(e, rect);
                   }
                 }}
-                onMouseUp={handleTextMouseUp}
-                onMouseLeave={handleTextMouseUp}
-                onClickCapture={(e) => {
-                  // Deselect text if clicking on background (not on text elements)
+                onMouseUp={handleElementMouseUp}
+                onMouseLeave={handleElementMouseUp}
+                onMouseDown={(event) => {
+                  // Only deselect if clicking directly on the background, not on elements
                   if (
                     activeScreenshotId === screenshot.id &&
-                    selectedTextElement &&
-                    !(e.target as HTMLElement).closest("[data-text-element]")
+                    !(event.target as HTMLElement).closest(
+                      "[data-draggable-element]",
+                    )
                   ) {
-                    setSelectedTextElement(null);
+                    setSelectedElement(null);
                   }
                 }}
                 className={`relative h-full aspect-[9/19.5] rounded-xl overflow-hidden cursor-pointer transition-all ${
@@ -833,11 +1004,60 @@ function App() {
                 )}
 
                 {/* Content */}
-                <div className="absolute inset-0">
+                <div className="absolute inset-0 select-none">
+                  {/* Overlay Images - Draggable */}
+                  {screenshot.overlayImages.map((overlayImg, index) => (
+                    <div
+                      key={overlayImg.id}
+                      data-draggable-element="image"
+                      className="absolute cursor-move transition-all select-none"
+                      style={{
+                        left: `${overlayImg.x}%`,
+                        top: `${overlayImg.y}%`,
+                        transform: "translate(-50%, -50%)",
+                        width: `${overlayImg.width}%`,
+                        height: `${overlayImg.height}%`,
+                        zIndex: index + 1,
+                        outline:
+                          activeScreenshotId === screenshot.id &&
+                          selectedElement?.type === "image" &&
+                          selectedElement?.imageId === overlayImg.id
+                            ? "2px dashed rgba(255,255,255,0.8)"
+                            : "none",
+                        outlineOffset: "4px",
+                      }}
+                      onMouseDown={(e) => {
+                        if (activeScreenshotId === screenshot.id) {
+                          handleElementMouseDown(e, "image", overlayImg.id);
+                        }
+                      }}
+                    >
+                      <img
+                        src={overlayImg.src}
+                        alt="Overlay"
+                        className="w-full h-full object-contain pointer-events-none"
+                        draggable={false}
+                      />
+                      {activeScreenshotId === screenshot.id &&
+                        selectedElement?.type === "image" &&
+                        selectedElement?.imageId === overlayImg.id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeOverlayImage(overlayImg.id);
+                            }}
+                            className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs z-10"
+                          >
+                            ×
+                          </button>
+                        )}
+                    </div>
+                  ))}
+
                   {/* Headline - Draggable */}
                   <div
-                    data-text-element="headline"
-                    className="absolute cursor-move text-center font-bold transition-all"
+                    data-draggable-element="headline"
+                    className="absolute cursor-move text-center font-bold transition-all select-none"
                     style={{
                       left: `${screenshot.headlineX}%`,
                       top: `${screenshot.headlineY}%`,
@@ -849,13 +1069,13 @@ function App() {
                       fontFamily: getSelectedFont(),
                       outline:
                         activeScreenshotId === screenshot.id &&
-                        selectedTextElement === "headline"
+                        selectedElement?.type === "headline"
                           ? "2px dashed rgba(255,255,255,0.8)"
                           : "none",
                       outlineOffset: "4px",
                       background:
                         activeScreenshotId === screenshot.id &&
-                        selectedTextElement === "headline"
+                        selectedElement?.type === "headline"
                           ? "rgba(255,255,255,0.1)"
                           : "transparent",
                       padding: "8px",
@@ -863,7 +1083,7 @@ function App() {
                     }}
                     onMouseDown={(e) => {
                       if (activeScreenshotId === screenshot.id) {
-                        handleTextMouseDown(e, "headline");
+                        handleElementMouseDown(e, "headline");
                       }
                     }}
                   >
@@ -872,8 +1092,8 @@ function App() {
 
                   {/* Subheadline - Draggable */}
                   <div
-                    data-text-element="subheadline"
-                    className="absolute cursor-move text-center font-semibold transition-all"
+                    data-draggable-element="subheadline"
+                    className="absolute cursor-move text-center font-semibold transition-all select-none"
                     style={{
                       left: `${screenshot.subheadlineX}%`,
                       top: `${screenshot.subheadlineY}%`,
@@ -885,13 +1105,13 @@ function App() {
                       fontFamily: getSelectedFont(),
                       outline:
                         activeScreenshotId === screenshot.id &&
-                        selectedTextElement === "subheadline"
+                        selectedElement?.type === "subheadline"
                           ? "2px dashed rgba(255,255,255,0.8)"
                           : "none",
                       outlineOffset: "4px",
                       background:
                         activeScreenshotId === screenshot.id &&
-                        selectedTextElement === "subheadline"
+                        selectedElement?.type === "subheadline"
                           ? "rgba(255,255,255,0.1)"
                           : "transparent",
                       padding: "8px",
@@ -899,7 +1119,7 @@ function App() {
                     }}
                     onMouseDown={(e) => {
                       if (activeScreenshotId === screenshot.id) {
-                        handleTextMouseDown(e, "subheadline");
+                        handleElementMouseDown(e, "subheadline");
                       }
                     }}
                   >
@@ -1202,6 +1422,111 @@ function App() {
                   className="w-full accent-violet-500"
                 />
               </div>
+            </div>
+
+            {/* Overlay Images */}
+            <div className="space-y-2">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">
+                  Overlay Images
+                </label>
+                <input
+                  ref={overlayImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) addOverlayImage(file);
+                    e.target.value = "";
+                  }}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => overlayImageInputRef.current?.click()}
+                  className="w-full bg-[#2a2a2a] hover:bg-[#333] text-gray-300 text-sm py-2 rounded-md transition-colors"
+                >
+                  + Add Image
+                </button>
+              </div>
+              {activeScreenshot.overlayImages.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500">
+                    {activeScreenshot.overlayImages.length} image(s) added
+                  </p>
+                  {selectedElement?.type === "image" &&
+                    selectedElement.imageId && (
+                      <>
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">
+                            Image Size:{" "}
+                            {Math.round(
+                              activeScreenshot.overlayImages.find(
+                                (img) => img.id === selectedElement.imageId,
+                              )?.width || 0,
+                            )}
+                            %
+                          </label>
+                          <input
+                            type="range"
+                            min="5"
+                            max="80"
+                            value={
+                              activeScreenshot.overlayImages.find(
+                                (img) => img.id === selectedElement.imageId,
+                              )?.width || 20
+                            }
+                            onChange={(e) =>
+                              updateOverlayImageSize(
+                                selectedElement.imageId!,
+                                Number(e.target.value),
+                              )
+                            }
+                            className="w-full accent-violet-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">
+                            Layer Order
+                          </label>
+                          <div className="grid grid-cols-2 gap-1">
+                            <button
+                              onClick={() =>
+                                bringImageToFront(selectedElement.imageId!)
+                              }
+                              className="bg-[#2a2a2a] hover:bg-[#333] text-gray-300 text-xs py-1.5 rounded transition-colors"
+                            >
+                              To Front
+                            </button>
+                            <button
+                              onClick={() =>
+                                sendImageToBack(selectedElement.imageId!)
+                              }
+                              className="bg-[#2a2a2a] hover:bg-[#333] text-gray-300 text-xs py-1.5 rounded transition-colors"
+                            >
+                              To Back
+                            </button>
+                            <button
+                              onClick={() =>
+                                bringImageForward(selectedElement.imageId!)
+                              }
+                              className="bg-[#2a2a2a] hover:bg-[#333] text-gray-300 text-xs py-1.5 rounded transition-colors"
+                            >
+                              Forward
+                            </button>
+                            <button
+                              onClick={() =>
+                                sendImageBackward(selectedElement.imageId!)
+                              }
+                              className="bg-[#2a2a2a] hover:bg-[#333] text-gray-300 text-xs py-1.5 rounded transition-colors"
+                            >
+                              Backward
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                </div>
+              )}
             </div>
           </div>
         </div>
