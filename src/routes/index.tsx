@@ -21,6 +21,7 @@ type DeviceColor = {
   id: string;
   label: string;
   frame: string;
+  frameColors?: string[];
   screen: string;
 };
 
@@ -87,12 +88,31 @@ const devices: DeviceSpec[] = [
       {
         id: "black",
         label: "Black Titanium",
-        frame: "#1c1c1e",
+        frame: "#282828",
+        frameColors: ["#4a4a4a", "#282828", "#1c1c1e", "#282828", "#4a4a4a"],
         screen: "#000",
       },
-      { id: "natural", label: "Natural", frame: "#c5b9a8", screen: "#000" },
-      { id: "blue", label: "Blue", frame: "#3d4a5c", screen: "#000" },
-      { id: "white", label: "White", frame: "#f5f5f7", screen: "#000" },
+      {
+        id: "natural",
+        label: "Natural",
+        frame: "#8C8883",
+        frameColors: ["#AAA59E", "#8C8883", "#75726D", "#8C8883", "#AAA59E"],
+        screen: "#000",
+      },
+      {
+        id: "blue",
+        label: "Blue",
+        frame: "#2F3846",
+        frameColors: ["#455163", "#2F3846", "#202630", "#2F3846", "#455163"],
+        screen: "#000",
+      },
+      {
+        id: "white",
+        label: "White",
+        frame: "#E3E3E4",
+        frameColors: ["#F2F2F2", "#E3E3E4", "#D1D1D2", "#E3E3E4", "#F2F2F2"],
+        screen: "#000",
+      },
     ],
   },
   {
@@ -109,12 +129,31 @@ const devices: DeviceSpec[] = [
       {
         id: "black",
         label: "Black Titanium",
-        frame: "#1c1c1e",
+        frame: "#282828",
+        frameColors: ["#4a4a4a", "#282828", "#1c1c1e", "#282828", "#4a4a4a"],
         screen: "#000",
       },
-      { id: "natural", label: "Natural", frame: "#c5b9a8", screen: "#000" },
-      { id: "blue", label: "Blue", frame: "#3d4a5c", screen: "#000" },
-      { id: "white", label: "White", frame: "#f5f5f7", screen: "#000" },
+      {
+        id: "natural",
+        label: "Natural",
+        frame: "#8C8883",
+        frameColors: ["#AAA59E", "#8C8883", "#75726D", "#8C8883", "#AAA59E"],
+        screen: "#000",
+      },
+      {
+        id: "blue",
+        label: "Blue",
+        frame: "#2F3846",
+        frameColors: ["#455163", "#2F3846", "#202630", "#2F3846", "#455163"],
+        screen: "#000",
+      },
+      {
+        id: "white",
+        label: "White",
+        frame: "#E3E3E4",
+        frameColors: ["#F2F2F2", "#E3E3E4", "#D1D1D2", "#E3E3E4", "#F2F2F2"],
+        screen: "#000",
+      },
     ],
   },
   {
@@ -128,10 +167,34 @@ const devices: DeviceSpec[] = [
     notchHeight: 60,
     hasIsland: false,
     colors: [
-      { id: "midnight", label: "Midnight", frame: "#1c1c1e", screen: "#000" },
-      { id: "purple", label: "Purple", frame: "#e5ddea", screen: "#000" },
-      { id: "blue", label: "Blue", frame: "#a7c1d9", screen: "#000" },
-      { id: "red", label: "Red", frame: "#fc0324", screen: "#000" },
+      {
+        id: "midnight",
+        label: "Midnight",
+        frame: "#2B3037",
+        frameColors: ["#3A414A", "#2B3037", "#1E2227", "#2B3037", "#3A414A"],
+        screen: "#000",
+      },
+      {
+        id: "purple",
+        label: "Purple",
+        frame: "#E5DDEA",
+        frameColors: ["#F0EAF5", "#E5DDEA", "#D5CDDA", "#E5DDEA", "#F0EAF5"],
+        screen: "#000",
+      },
+      {
+        id: "blue",
+        label: "Blue",
+        frame: "#A7C1D9",
+        frameColors: ["#BDD3E8", "#A7C1D9", "#92AAC0", "#A7C1D9", "#BDD3E8"],
+        screen: "#000",
+      },
+      {
+        id: "red",
+        label: "Red",
+        frame: "#FC0324",
+        frameColors: ["#FF3B55", "#FC0324", "#D4001A", "#FC0324", "#FF3B55"],
+        screen: "#000",
+      },
     ],
   },
 ];
@@ -621,15 +684,117 @@ function App() {
       const cornerRadiusY = deviceHeightPx * 0.065;
       const frameRadius = Math.min(cornerRadiusX, cornerRadiusY);
 
-      // Bezel/padding is 1.5% of device width (same as CSS padding: "1.5%")
-      const bezelThickness = deviceWidthPx * 0.015;
+      // Bezel/padding is 1.2% of device width
+      const bezelThickness = deviceWidthPx * 0.012;
+
+      // Draw device buttons
+      const btnWidth = deviceWidthPx * 0.008;
+      const btnRadius = 2 * scaleX;
+
+      const drawButton = (
+        x: number,
+        y: number,
+        w: number,
+        h: number,
+        isRight: boolean,
+      ) => {
+        ctx.save();
+        if (selectedColor.frameColors) {
+          const btnGradient = ctx.createLinearGradient(x, y, x + w, y);
+          const c1 = selectedColor.frameColors[2];
+          const c2 = selectedColor.frameColors[0];
+
+          if (isRight) {
+            btnGradient.addColorStop(0, c1);
+            btnGradient.addColorStop(1, c2);
+          } else {
+            // "to left" in CSS means right-to-left.
+            // Canvas gradient x -> x+w is left-to-right.
+            // So we want the color that is at the "right" (c1) to be at x+w (1)
+            // and the color at "left" (c2) to be at x (0).
+            btnGradient.addColorStop(0, c2);
+            btnGradient.addColorStop(1, c1);
+          }
+          ctx.fillStyle = btnGradient;
+        } else {
+          ctx.fillStyle = selectedColor.frame;
+        }
+
+        ctx.shadowColor = "rgba(0,0,0,0.1)";
+        ctx.shadowBlur = 2 * scaleX;
+        ctx.shadowOffsetY = 1 * scaleX;
+
+        ctx.beginPath();
+        if (isRight) {
+          ctx.roundRect(x, y, w, h, [0, btnRadius, btnRadius, 0]);
+        } else {
+          ctx.roundRect(x, y, w, h, [btnRadius, 0, 0, btnRadius]);
+        }
+        ctx.fill();
+        ctx.restore();
+      };
+
+      // Side button (right) - top 18%, height 8%
+      drawButton(
+        deviceX + deviceWidthPx,
+        deviceY + deviceHeightPx * 0.18,
+        btnWidth,
+        deviceHeightPx * 0.08,
+        true,
+      );
+
+      // Silent switch (left) - top 15%, height 4%
+      drawButton(
+        deviceX - btnWidth,
+        deviceY + deviceHeightPx * 0.15,
+        btnWidth,
+        deviceHeightPx * 0.04,
+        false,
+      );
+
+      // Volume up (left) - top 21%, height 6%
+      drawButton(
+        deviceX - btnWidth,
+        deviceY + deviceHeightPx * 0.21,
+        btnWidth,
+        deviceHeightPx * 0.06,
+        false,
+      );
+
+      // Volume down (left) - top 28%, height 6%
+      drawButton(
+        deviceX - btnWidth,
+        deviceY + deviceHeightPx * 0.28,
+        btnWidth,
+        deviceHeightPx * 0.06,
+        false,
+      );
 
       // Draw device frame with shadow
       ctx.save();
       ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
       ctx.shadowBlur = 50 * scaleX;
       ctx.shadowOffsetY = 25 * scaleX;
-      ctx.fillStyle = selectedColor.frame;
+
+      if (selectedColor.frameColors) {
+        // Create gradient for metallic look
+        const gradient = ctx.createLinearGradient(
+          deviceX,
+          deviceY,
+          deviceX + deviceWidthPx,
+          deviceY + deviceHeightPx,
+        );
+        selectedColor.frameColors.forEach((color, index) => {
+          gradient.addColorStop(
+            index / (selectedColor.frameColors!.length - 1),
+            color,
+          );
+        });
+        ctx.fillStyle = gradient;
+      } else {
+        ctx.fillStyle = selectedColor.frame;
+      }
+
       ctx.beginPath();
       ctx.roundRect(
         deviceX,
@@ -639,20 +804,40 @@ function App() {
         frameRadius,
       );
       ctx.fill();
-      ctx.restore();
 
-      // Inner bezel edge (1.2% inset with darker color)
-      const innerInset = deviceWidthPx * 0.012;
-      ctx.fillStyle = "#1a1a1a";
+      // Add metallic shine/border effects
+      // Outer subtle border
+      ctx.strokeStyle = "rgba(0,0,0,0.1)";
+      ctx.lineWidth = 1 * scaleX;
+      ctx.stroke();
+
+      // Inner highlight (bevel)
       ctx.beginPath();
       ctx.roundRect(
-        deviceX + innerInset,
-        deviceY + innerInset,
-        deviceWidthPx - innerInset * 2,
-        deviceHeightPx - innerInset * 2,
-        frameRadius - innerInset,
+        deviceX + 1 * scaleX,
+        deviceY + 1 * scaleX,
+        deviceWidthPx - 2 * scaleX,
+        deviceHeightPx - 2 * scaleX,
+        frameRadius,
       );
-      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.3)";
+      ctx.lineWidth = 2 * scaleX;
+      ctx.stroke();
+
+      // Inner shadow
+      ctx.beginPath();
+      ctx.roundRect(
+        deviceX + 3 * scaleX,
+        deviceY + 3 * scaleX,
+        deviceWidthPx - 6 * scaleX,
+        deviceHeightPx - 6 * scaleX,
+        frameRadius,
+      );
+      ctx.strokeStyle = "rgba(0,0,0,0.2)";
+      ctx.lineWidth = 2 * scaleX;
+      ctx.stroke();
+
+      ctx.restore();
 
       // Screen area
       const screenX = deviceX + bezelThickness;
@@ -1082,21 +1267,16 @@ function App() {
                       className="relative w-full shadow-2xl"
                       style={{
                         aspectRatio: `${selectedDevice.width} / ${selectedDevice.height}`,
-                        backgroundColor: selectedColor.frame,
+                        background: selectedColor.frameColors
+                          ? `linear-gradient(135deg, ${selectedColor.frameColors.join(", ")})`
+                          : selectedColor.frame,
                         borderRadius: "14%/6.5%",
-                        padding: "1.5%",
+                        padding: "1.2%",
                         boxShadow:
-                          "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.1) inset",
+                          "inset 0 0 4px 1px rgba(255,255,255,0.3), inset 0 0 0 2px rgba(0,0,0,0.2), 0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                        border: "1px solid rgba(0,0,0,0.1)",
                       }}
                     >
-                      {/* Inner bezel edge */}
-                      <div
-                        className="absolute inset-[1.2%] rounded-[13%/6%]"
-                        style={{
-                          backgroundColor: "#1a1a1a",
-                          boxShadow: "0 0 0 1px rgba(0,0,0,0.8) inset",
-                        }}
-                      />
                       {/* Screen */}
                       <div
                         className="relative w-full h-full overflow-hidden"
@@ -1109,7 +1289,7 @@ function App() {
                           <img
                             src={screenshot.screenshotSrc}
                             alt="Screenshot"
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-fill"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-[#1c1c1e]">
@@ -1122,7 +1302,7 @@ function App() {
                         {/* Dynamic Island */}
                         {selectedDevice.hasIsland && (
                           <div
-                            className="absolute left-1/2 -translate-x-1/2 bg-black"
+                            className="absolute left-1/2 -translate-x-1/2 bg-black z-20"
                             style={{
                               top: "1.8%",
                               width: "28%",
@@ -1136,7 +1316,7 @@ function App() {
                         {!selectedDevice.hasIsland &&
                           selectedDevice.notchWidth > 0 && (
                             <div
-                              className="absolute top-0 left-1/2 -translate-x-1/2 bg-black"
+                              className="absolute top-0 left-1/2 -translate-x-1/2 bg-black z-20"
                               style={{
                                 width: "35%",
                                 height: "3.5%",
@@ -1148,22 +1328,48 @@ function App() {
 
                       {/* Side button (right) */}
                       <div
-                        className="absolute -right-[0.8%] top-[18%] w-[0.8%] h-[8%] rounded-r-sm"
-                        style={{ backgroundColor: selectedColor.frame }}
+                        className="absolute -right-[0.8%] top-[18%] w-[0.8%] h-[8%] rounded-r-xs"
+                        style={{
+                          background: selectedColor.frameColors
+                            ? `linear-gradient(to right, ${selectedColor.frameColors[2]}, ${selectedColor.frameColors[0]})`
+                            : selectedColor.frame,
+                          boxShadow:
+                            "inset 1px 0 2px rgba(255,255,255,0.3), 2px 0 4px rgba(0,0,0,0.2)",
+                        }}
                       />
 
-                      {/* Volume buttons (left) */}
+                      {/* Silent switch (left) */}
                       <div
-                        className="absolute -left-[0.8%] top-[15%] w-[0.8%] h-[4%] rounded-l-sm"
-                        style={{ backgroundColor: selectedColor.frame }}
+                        className="absolute -left-[0.8%] top-[15%] w-[0.8%] h-[4%] rounded-l-xs"
+                        style={{
+                          background: selectedColor.frameColors
+                            ? `linear-gradient(to left, ${selectedColor.frameColors[2]}, ${selectedColor.frameColors[0]})`
+                            : selectedColor.frame,
+                          boxShadow:
+                            "inset -1px 0 2px rgba(255,255,255,0.3), -2px 0 4px rgba(0,0,0,0.2)",
+                        }}
                       />
+                      {/* Volume up (left) */}
                       <div
-                        className="absolute -left-[0.8%] top-[21%] w-[0.8%] h-[6%] rounded-l-sm"
-                        style={{ backgroundColor: selectedColor.frame }}
+                        className="absolute -left-[0.8%] top-[21%] w-[0.8%] h-[6%] rounded-l-xs"
+                        style={{
+                          background: selectedColor.frameColors
+                            ? `linear-gradient(to left, ${selectedColor.frameColors[2]}, ${selectedColor.frameColors[0]})`
+                            : selectedColor.frame,
+                          boxShadow:
+                            "inset -1px 0 2px rgba(255,255,255,0.3), -2px 0 4px rgba(0,0,0,0.2)",
+                        }}
                       />
+                      {/* Volume down (left) */}
                       <div
-                        className="absolute -left-[0.8%] top-[28%] w-[0.8%] h-[6%] rounded-l-sm"
-                        style={{ backgroundColor: selectedColor.frame }}
+                        className="absolute -left-[0.8%] top-[28%] w-[0.8%] h-[6%] rounded-l-xs"
+                        style={{
+                          background: selectedColor.frameColors
+                            ? `linear-gradient(to left, ${selectedColor.frameColors[2]}, ${selectedColor.frameColors[0]})`
+                            : selectedColor.frame,
+                          boxShadow:
+                            "inset -1px 0 2px rgba(255,255,255,0.3), -2px 0 4px rgba(0,0,0,0.2)",
+                        }}
                       />
                     </div>
                   </div>
