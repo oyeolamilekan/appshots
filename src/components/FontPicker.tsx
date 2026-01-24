@@ -59,7 +59,7 @@ export const FontPicker = ({
               placeholder="Search from all Google Fonts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#2a2a2a] text-white pl-10 pr-4 py-3 rounded-lg border border-white/10 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all placeholder:text-gray-500"
+              className="w-full bg-[#2a2a2a] text-white pl-10 pr-4 py-3 rounded-lg border border-white/10 focus:border-white focus:ring-1 focus:ring-white outline-none transition-all placeholder:text-gray-500"
               autoFocus
             />
           </div>
@@ -75,9 +75,9 @@ export const FontPicker = ({
                   onSelect(font.family);
                   onClose();
                 }}
-                className={`group flex flex-col p-4 rounded-lg border text-left transition-all hover:border-violet-500 hover:bg-[#2a2a2a] ${
+                className={`group flex flex-col p-4 rounded-lg border text-left transition-all hover:border-white hover:bg-[#2a2a2a] ${
                   selectedFontFamily === font.family
-                    ? "border-violet-500 bg-[#2a2a2a] ring-1 ring-violet-500"
+                    ? "border-white bg-[#2a2a2a] ring-1 ring-white"
                     : "border-white/10 bg-[#141414]"
                 }`}
               >
@@ -103,7 +103,7 @@ export const FontPicker = ({
                 <p>No fonts found matching "{searchQuery}"</p>
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="text-violet-400 hover:text-violet-300 text-sm"
+                  className="text-neutral-400 hover:text-neutral-300 text-sm"
                 >
                   Clear search
                 </button>
