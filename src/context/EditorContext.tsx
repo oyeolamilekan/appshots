@@ -13,7 +13,6 @@ import type {
   ExportSize,
   Screenshot,
   ImageOverlay,
-  GradientPreset,
   ShadowConfig,
 } from "../types";
 import { devices, exportSizes, gradientPresets } from "../constants";
@@ -80,7 +79,10 @@ interface EditorContextType {
   updateOverlayImageSize: (imageId: string, widthPercent: number) => void;
   updateOverlayImageLayer: (imageId: string, layer: "behind" | "front") => void;
   updateOverlayImageRotation: (imageId: string, rotation: number) => void;
-  updateOverlayImageShadow: (imageId: string, shadow: Partial<ShadowConfig>) => void;
+  updateOverlayImageShadow: (
+    imageId: string,
+    shadow: Partial<ShadowConfig>,
+  ) => void;
   bringImageForward: (imageId: string) => void;
   sendImageBackward: (imageId: string) => void;
   bringImageToFront: (imageId: string) => void;
