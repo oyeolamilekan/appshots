@@ -234,9 +234,8 @@ export const CanvasPreview = () => {
                       handleElementMouseDown(e, "headline");
                     }
                   }}
-                >
-                  {screenshot.headline}
-                </div>
+                  dangerouslySetInnerHTML={{ __html: screenshot.headline }}
+                />
 
                 {/* Subheadline - Draggable */}
                 <div
@@ -279,9 +278,8 @@ export const CanvasPreview = () => {
                       handleElementMouseDown(e, "subheadline");
                     }
                   }}
-                >
-                  {screenshot.subheadline}
-                </div>
+                  dangerouslySetInnerHTML={{ __html: screenshot.subheadline }}
+                />
 
                 {/* Device */}
                 <div

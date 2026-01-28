@@ -1,5 +1,6 @@
 import type { Screenshot, DeviceSpec, DeviceColor, ExportSize } from "../types";
 import { gradientPresets } from "../constants";
+import { drawRichText } from "./rich-text-canvas";
 
 interface ExportOptions {
   screenshots: Screenshot[];
@@ -69,76 +70,37 @@ export const exportScreenshots = async ({
     const subheadlineMaxWidth =
       canvas.width * (screenshot.subheadlineWidth / 100) - paddingX;
 
-    // Word wrap function that matches CSS whitespace-pre-wrap behavior
-    const wrapText = (text: string, maxWidth: number): string[] => {
-      const lines: string[] = [];
-      const paragraphs = text.split("\n");
-
-      for (const paragraph of paragraphs) {
-        if (paragraph === "") {
-          lines.push("");
-          continue;
-        }
-
-        const words = paragraph.split(" ");
-        let currentLine = "";
-
-        for (const word of words) {
-          const testLine = currentLine ? `${currentLine} ${word}` : word;
-          const metrics = ctx.measureText(testLine);
-
-          if (metrics.width > maxWidth && currentLine) {
-            lines.push(currentLine);
-            currentLine = word;
-          } else {
-            currentLine = testLine;
-          }
-        }
-
-        if (currentLine) {
-          lines.push(currentLine);
-        }
-      }
-
-      return lines;
-    };
-
-    // Draw headline
-    ctx.fillStyle = screenshot.textColor;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-
     // Position text using same percentage positions, scaled to export canvas
     const headlineX = canvas.width * (screenshot.headlineX / 100);
-    let headlineTextY = canvas.height * (screenshot.headlineY / 100);
+    const headlineTextY = canvas.height * (screenshot.headlineY / 100);
 
-    // Set font before wrapping to ensure correct measurement
-    const headlineFont = `700 ${exportHeadlineFontSize}px ${fontFamily}`;
-    ctx.font = headlineFont;
-
-    const headlineLines = wrapText(screenshot.headline, headlineMaxWidth);
-
-    headlineLines.forEach((line) => {
-      ctx.fillText(line, headlineX, headlineTextY);
-      headlineTextY += exportHeadlineFontSize * lineHeight;
+    // Draw headline with rich text support
+    drawRichText(ctx, screenshot.headline, {
+      x: headlineX,
+      y: headlineTextY,
+      maxWidth: headlineMaxWidth,
+      fontSize: exportHeadlineFontSize,
+      fontFamily,
+      defaultColor: screenshot.textColor,
+      lineHeight,
+      textAlign: "center",
+      fontWeight: 700,
     });
 
-    // Draw subheadline
+    // Draw subheadline with rich text support
     const subheadlineX = canvas.width * (screenshot.subheadlineX / 100);
-    let subheadlineTextY = canvas.height * (screenshot.subheadlineY / 100);
+    const subheadlineTextY = canvas.height * (screenshot.subheadlineY / 100);
 
-    // Set font before wrapping to ensure correct measurement
-    const subheadlineFont = `600 ${exportSubheadlineFontSize}px ${fontFamily}`;
-    ctx.font = subheadlineFont;
-
-    const subheadlineLines = wrapText(
-      screenshot.subheadline,
-      subheadlineMaxWidth,
-    );
-
-    subheadlineLines.forEach((line) => {
-      ctx.fillText(line, subheadlineX, subheadlineTextY);
-      subheadlineTextY += exportSubheadlineFontSize * lineHeight;
+    drawRichText(ctx, screenshot.subheadline, {
+      x: subheadlineX,
+      y: subheadlineTextY,
+      maxWidth: subheadlineMaxWidth,
+      fontSize: exportSubheadlineFontSize,
+      fontFamily,
+      defaultColor: screenshot.textColor,
+      lineHeight,
+      textAlign: "center",
+      fontWeight: 600,
     });
 
     // Helper to draw overlay images

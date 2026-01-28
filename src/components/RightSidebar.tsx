@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { useEditor } from "../context/EditorContext";
 import { gradientPresets } from "../constants";
+import { RichTextEditor } from "./RichTextEditor";
 
 export const RightSidebar = () => {
   const {
@@ -256,12 +257,9 @@ export const RightSidebar = () => {
               <label className="block text-xs text-gray-400 mb-1">
                 Headline
               </label>
-              <textarea
+              <RichTextEditor
                 value={activeScreenshot.headline}
-                onChange={(e) =>
-                  updateActiveScreenshot({ headline: e.target.value })
-                }
-                className="w-full bg-[#2a2a2a] text-white text-sm rounded-md px-3 py-2 resize-none h-20 outline-none focus:ring-1 focus:ring-white"
+                onChange={(html) => updateActiveScreenshot({ headline: html })}
                 placeholder="Enter headline..."
               />
             </div>
@@ -269,12 +267,9 @@ export const RightSidebar = () => {
               <label className="block text-xs text-gray-400 mb-1">
                 Subheadline
               </label>
-              <textarea
+              <RichTextEditor
                 value={activeScreenshot.subheadline}
-                onChange={(e) =>
-                  updateActiveScreenshot({ subheadline: e.target.value })
-                }
-                className="w-full bg-[#2a2a2a] text-white text-sm rounded-md px-3 py-2 resize-none h-20 outline-none focus:ring-1 focus:ring-white"
+                onChange={(html) => updateActiveScreenshot({ subheadline: html })}
                 placeholder="Enter subheadline..."
               />
             </div>
