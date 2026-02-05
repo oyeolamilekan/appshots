@@ -14,15 +14,30 @@ import type {
   Screenshot,
   ImageOverlay,
   ShadowConfig,
+  Project,
 } from "../types";
 import { devices, exportSizes, gradientPresets } from "../constants";
 import { exportScreenshots } from "../lib/export-utils";
+import {
+  loadPersistedState,
+  useEditorPersistence,
+  clearPersistedState,
+} from "../lib/useLocalStorage";
 
 function generateId() {
   return Math.random().toString(36).substring(2, 9);
 }
 
 interface EditorContextType {
+  // Project state
+  projects: Project[];
+  activeProjectId: string;
+  activeProject: Project;
+  createProject: (name: string) => void;
+  renameProject: (id: string, name: string) => void;
+  deleteProject: (id: string) => void;
+  switchProject: (id: string) => void;
+
   // State
   isFontPickerOpen: boolean;
   setIsFontPickerOpen: (open: boolean) => void;
@@ -90,49 +105,114 @@ interface EditorContextType {
   handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleExport: () => void;
   getBackgroundStyle: (screenshot: Screenshot) => string;
+  resetEditor: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
-export const EditorProvider = ({ children }: { children: ReactNode }) => {
-  const [isFontPickerOpen, setIsFontPickerOpen] = useState(false);
-  const [selectedDeviceId, setSelectedDeviceId] = useState(devices[0].id);
-  const [selectedColorId, setSelectedColorId] = useState(
-    devices[0].colors[0].id,
-  );
-  const [exportSizeId, setExportSizeId] = useState(exportSizes[0].id);
+// Default screenshot for new editors
+const createDefaultScreenshot = (): Screenshot => ({
+  id: generateId(),
+  headline: "Showcase Your App",
+  subheadline:
+    "Create stunning App Store screenshots in minutes. Customizable templates, devices, and backgrounds.",
+  screenshotSrc: null,
+  backgroundColor: "#8b5cf6",
+  backgroundMode: "solid",
+  gradientPresetId: null,
+  textColor: "#ffffff",
+  headlineX: 50,
+  headlineY: 10,
+  headlineWidth: 80,
+  subheadlineX: 50,
+  subheadlineY: 18,
+  subheadlineWidth: 80,
+  fontFamily: "Inter",
+  overlayImages: [],
+  deviceScale: 85,
+  deviceOffsetY: 30,
+  deviceRotation: 0,
+  deviceShadow: {
+    enabled: true,
+    color: "#000000",
+    blur: 50,
+    offsetX: 0,
+    offsetY: 25,
+  },
+});
 
-  const [screenshots, setScreenshots] = useState<Screenshot[]>([
-    {
-      id: generateId(),
-      headline: "Showcase Your App",
-      subheadline:
-        "Create stunning App Store screenshots in minutes. Customizable templates, devices, and backgrounds.",
-      screenshotSrc: null,
-      backgroundColor: "#8b5cf6",
-      backgroundMode: "solid",
-      gradientPresetId: null,
-      textColor: "#ffffff",
-      headlineX: 50,
-      headlineY: 10,
-      headlineWidth: 80,
-      subheadlineX: 50,
-      subheadlineY: 18,
-      subheadlineWidth: 80,
-      fontFamily: "Inter",
-      overlayImages: [],
-      deviceScale: 85,
-      deviceOffsetY: 30,
-      deviceRotation: 0,
-      deviceShadow: {
-        enabled: true,
-        color: "#000000",
-        blur: 50,
-        offsetX: 0,
-        offsetY: 25,
-      },
-    },
-  ]);
+// Create a default project
+const createDefaultProject = (name: string = "My Project"): Project => {
+  const defaultScreenshot = createDefaultScreenshot();
+  return {
+    id: generateId(),
+    name,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    screenshots: [defaultScreenshot],
+    selectedDeviceId: devices[0].id,
+    selectedColorId: devices[0].colors[0].id,
+    exportSizeId: exportSizes[0].id,
+    activeScreenshotId: defaultScreenshot.id,
+    headlineFontSize: 72,
+    subheadlineFontSize: 42,
+  };
+};
+
+// Load persisted state once on module load
+const persistedState = loadPersistedState();
+
+// Initialize projects from persisted state or create default
+const getInitialProjects = (): Project[] => {
+  if (persistedState?.projects && persistedState.projects.length > 0) {
+    return persistedState.projects;
+  }
+  return [createDefaultProject()];
+};
+
+const getInitialActiveProjectId = (projects: Project[]): string => {
+  if (persistedState?.activeProjectId) {
+    // Verify the project exists
+    const exists = projects.some((p) => p.id === persistedState.activeProjectId);
+    if (exists) return persistedState.activeProjectId;
+  }
+  return projects[0]?.id || generateId();
+};
+
+export const EditorProvider = ({ children }: { children: ReactNode }) => {
+  // Project state
+  const [projects, setProjects] = useState<Project[]>(getInitialProjects);
+  const [activeProjectId, setActiveProjectId] = useState(() =>
+    getInitialActiveProjectId(projects),
+  );
+
+  // Get active project
+  const activeProject =
+    projects.find((p) => p.id === activeProjectId) || projects[0];
+
+  // Initialize state from persisted values or defaults
+  const [isFontPickerOpen, setIsFontPickerOpen] = useState(false);
+  const [selectedDeviceId, setSelectedDeviceIdState] = useState(
+    activeProject.selectedDeviceId,
+  );
+  const [selectedColorId, setSelectedColorIdState] = useState(
+    activeProject.selectedColorId,
+  );
+  const [exportSizeId, setExportSizeIdState] = useState(
+    activeProject.exportSizeId,
+  );
+  const [screenshots, setScreenshotsState] = useState<Screenshot[]>(
+    activeProject.screenshots,
+  );
+  const [activeScreenshotId, setActiveScreenshotIdState] = useState(
+    activeProject.activeScreenshotId,
+  );
+  const [headlineFontSize, setHeadlineFontSizeState] = useState(
+    activeProject.headlineFontSize,
+  );
+  const [subheadlineFontSize, setSubheadlineFontSizeState] = useState(
+    activeProject.subheadlineFontSize,
+  );
 
   const [selectedElement, setSelectedElement] = useState<{
     type: "headline" | "subheadline" | "image";
@@ -148,11 +228,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const overlayImageInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeScreenshotId, setActiveScreenshotId] = useState(
-    screenshots[0].id,
-  );
-  const [headlineFontSize, setHeadlineFontSize] = useState(72);
-  const [subheadlineFontSize, setSubheadlineFontSize] = useState(42);
   const [previewDimensions, setPreviewDimensions] = useState({
     width: 0,
     height: 0,
@@ -161,6 +236,115 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sync project state when local state changes
+  const updateProjectState = useCallback(() => {
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === activeProjectId
+          ? {
+              ...p,
+              screenshots,
+              selectedDeviceId,
+              selectedColorId,
+              exportSizeId,
+              activeScreenshotId,
+              headlineFontSize,
+              subheadlineFontSize,
+              updatedAt: Date.now(),
+            }
+          : p,
+      ),
+    );
+  }, [
+    activeProjectId,
+    screenshots,
+    selectedDeviceId,
+    selectedColorId,
+    exportSizeId,
+    activeScreenshotId,
+    headlineFontSize,
+    subheadlineFontSize,
+  ]);
+
+  // Update project whenever state changes
+  useEffect(() => {
+    updateProjectState();
+  }, [updateProjectState]);
+
+  // Auto-save projects to localStorage
+  useEditorPersistence({
+    projects,
+    activeProjectId,
+  });
+
+  // Wrapper functions that update both local state and project
+  const setSelectedDeviceId = (id: string) => {
+    setSelectedDeviceIdState(id);
+  };
+  const setSelectedColorId = (id: string) => {
+    setSelectedColorIdState(id);
+  };
+  const setExportSizeId = (id: string) => {
+    setExportSizeIdState(id);
+  };
+  const setScreenshots = (newScreenshots: Screenshot[]) => {
+    setScreenshotsState(newScreenshots);
+  };
+  const setActiveScreenshotId = (id: string) => {
+    setActiveScreenshotIdState(id);
+  };
+  const setHeadlineFontSize = (size: number) => {
+    setHeadlineFontSizeState(size);
+  };
+  const setSubheadlineFontSize = (size: number) => {
+    setSubheadlineFontSizeState(size);
+  };
+
+  // Project management functions
+  const createProject = (name: string) => {
+    const newProject = createDefaultProject(name);
+    setProjects((prev) => [...prev, newProject]);
+    switchProject(newProject.id);
+  };
+
+  const renameProject = (id: string, name: string) => {
+    setProjects((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, name, updatedAt: Date.now() } : p,
+      ),
+    );
+  };
+
+  const deleteProject = (id: string) => {
+    // Don't delete the last project
+    if (projects.length <= 1) return;
+
+    setProjects((prev) => prev.filter((p) => p.id !== id));
+
+    // If deleting active project, switch to another
+    if (id === activeProjectId) {
+      const remaining = projects.filter((p) => p.id !== id);
+      if (remaining.length > 0) {
+        switchProject(remaining[0].id);
+      }
+    }
+  };
+
+  const switchProject = (id: string) => {
+    const project = projects.find((p) => p.id === id);
+    if (!project) return;
+
+    setActiveProjectId(id);
+    setSelectedDeviceIdState(project.selectedDeviceId);
+    setSelectedColorIdState(project.selectedColorId);
+    setExportSizeIdState(project.exportSizeId);
+    setScreenshotsState(project.screenshots);
+    setActiveScreenshotIdState(project.activeScreenshotId);
+    setHeadlineFontSizeState(project.headlineFontSize);
+    setSubheadlineFontSizeState(project.subheadlineFontSize);
+    setSelectedElement(null);
+  };
 
   const selectedDevice =
     devices.find((d) => d.id === selectedDeviceId) || devices[0];
@@ -174,7 +358,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const updateActiveScreenshot = useCallback(
     (updates: Partial<Screenshot>) => {
-      setScreenshots((prev) =>
+      setScreenshotsState((prev) =>
         prev.map((s) =>
           s.id === activeScreenshotId ? { ...s, ...updates } : s,
         ),
@@ -498,9 +682,36 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  /**
+   * Resets the editor to default state and clears localStorage
+   */
+  const resetEditor = () => {
+    clearPersistedState();
+    const defaultProject = createDefaultProject();
+    setProjects([defaultProject]);
+    setActiveProjectId(defaultProject.id);
+    setSelectedDeviceIdState(defaultProject.selectedDeviceId);
+    setSelectedColorIdState(defaultProject.selectedColorId);
+    setExportSizeIdState(defaultProject.exportSizeId);
+    setScreenshotsState(defaultProject.screenshots);
+    setActiveScreenshotIdState(defaultProject.activeScreenshotId);
+    setHeadlineFontSizeState(defaultProject.headlineFontSize);
+    setSubheadlineFontSizeState(defaultProject.subheadlineFontSize);
+    setSelectedElement(null);
+  };
+
   return (
     <EditorContext.Provider
       value={{
+        // Project state
+        projects,
+        activeProjectId,
+        activeProject,
+        createProject,
+        renameProject,
+        deleteProject,
+        switchProject,
+
         isFontPickerOpen,
         setIsFontPickerOpen,
         selectedDeviceId,
@@ -549,6 +760,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         handleFileUpload,
         handleExport,
         getBackgroundStyle,
+        resetEditor,
       }}
     >
       {children}

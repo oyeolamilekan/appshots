@@ -84,3 +84,31 @@ export type ExportSize = {
   width: number;
   height: number;
 };
+
+/**
+ * Project type - groups screenshots together
+ */
+export type Project = {
+  /** Unique project identifier */
+  id: string;
+  /** Project name */
+  name: string;
+  /** Creation timestamp */
+  createdAt: number;
+  /** Last update timestamp */
+  updatedAt: number;
+  /** Screenshots belonging to this project */
+  screenshots: Screenshot[];
+  /** Selected device ID for this project */
+  selectedDeviceId: string;
+  /** Selected device color ID */
+  selectedColorId: string;
+  /** Export size ID */
+  exportSizeId: string;
+  /** Active screenshot ID */
+  activeScreenshotId: string;
+  /** Headline font size */
+  headlineFontSize: number;
+  /** Subheadline font size */
+  subheadlineFontSize: number;
+};
