@@ -26,6 +26,7 @@
 export { RightSidebar } from "./RightSidebar";
 
 // Section components
+export { PositionPresets } from "./PositionPresets";
 export { LayoutSection } from "./LayoutSection";
 export { ContentSection } from "./ContentSection";
 export { AppearanceSection } from "./AppearanceSection";

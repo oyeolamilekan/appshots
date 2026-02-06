@@ -1,9 +1,10 @@
 /**
  * RightSidebar Component
  *
- * Main sidebar containing layout, content, appearance, and overlay image controls.
+ * Main sidebar containing position presets, layout, content, appearance, and overlay image controls.
  *
  * Features:
+ * - Position presets for quick device positioning
  * - Device layout controls (size, position, rotation, shadow)
  * - Text content editors (headline, subheadline)
  * - Appearance settings (background, colors, fonts)
@@ -12,6 +13,7 @@
 
 import { useEditor } from "../../context/EditorContext";
 import { gradientPresets } from "../../constants";
+import { PositionPresets } from "./PositionPresets";
 import { LayoutSection } from "./LayoutSection";
 import { ContentSection } from "./ContentSection";
 import { AppearanceSection } from "./AppearanceSection";
@@ -53,6 +55,11 @@ export const RightSidebar = () => {
   return (
     <aside className={STYLES.sidebar}>
       <div className={STYLES.content}>
+        <PositionPresets
+          screenshot={activeScreenshot}
+          onUpdateScreenshot={updateActiveScreenshot}
+        />
+
         <LayoutSection
           screenshot={activeScreenshot}
           headlineFontSize={headlineFontSize}
