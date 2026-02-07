@@ -139,6 +139,9 @@ const createDefaultScreenshot = (): Screenshot => ({
     offsetX: 0,
     offsetY: 25,
   },
+  deviceStyle: "flat",
+  device3dRotateY: -15,
+  device3dRotateX: 5,
 });
 
 // Create a default project
@@ -389,6 +392,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       deviceOffsetY: activeScreenshot.deviceOffsetY,
       deviceRotation: activeScreenshot.deviceRotation,
       deviceShadow: { ...activeScreenshot.deviceShadow },
+      deviceStyle: activeScreenshot.deviceStyle,
+      device3dRotateY: activeScreenshot.device3dRotateY,
+      device3dRotateX: activeScreenshot.device3dRotateX,
     };
     setScreenshots([...screenshots, newScreenshot]);
     setActiveScreenshotId(newScreenshot.id);

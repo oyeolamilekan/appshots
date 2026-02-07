@@ -76,6 +76,12 @@ export type Screenshot = {
   deviceOffsetY: number;
   deviceRotation: number;
   deviceShadow: ShadowConfig;
+  /** Device rendering style: flat (2D) or 3D */
+  deviceStyle: "flat" | "3d";
+  /** 3D rotation on Y axis (horizontal rotation) */
+  device3dRotateY: number;
+  /** 3D rotation on X axis (vertical tilt) */
+  device3dRotateX: number;
 };
 
 export type ExportSize = {

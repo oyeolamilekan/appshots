@@ -1,6 +1,7 @@
 import type { Screenshot, DeviceSpec, DeviceColor, ExportSize } from "../types";
 import { gradientPresets } from "../constants";
 import { drawRichText } from "./rich-text-canvas";
+import JSZip from "jszip";
 
 interface ExportOptions {
   screenshots: Screenshot[];
@@ -11,6 +12,54 @@ interface ExportOptions {
   headlineFontSize: number;
   subheadlineFontSize: number;
 }
+
+/**
+ * Convert data URL to Blob
+ */
+const dataURLtoBlob = (dataURL: string): Blob => {
+  const arr = dataURL.split(",");
+  const mime = arr[0].match(/:(.*?);/)?.[1] || "image/png";
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+};
+
+/**
+ * Download a single file
+ */
+const downloadFile = (dataURL: string, filename: string) => {
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = dataURL;
+  link.click();
+};
+
+/**
+ * Download multiple files as ZIP
+ */
+const downloadAsZip = async (files: { name: string; data: string }[]) => {
+  const zip = new JSZip();
+  
+  for (const file of files) {
+    const blob = dataURLtoBlob(file.data);
+    zip.file(file.name, blob);
+  }
+  
+  const content = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(content);
+  
+  const link = document.createElement("a");
+  link.download = "appstore-screenshots.zip";
+  link.href = url;
+  link.click();
+  
+  // Clean up
+  URL.revokeObjectURL(url);
+};
 
 export const exportScreenshots = async ({
   screenshots,
@@ -24,7 +73,12 @@ export const exportScreenshots = async ({
   // Wait for fonts to be loaded before exporting
   await document.fonts.ready;
 
-  for (const screenshot of screenshots) {
+  const exportedFiles: { name: string; data: string }[] = [];
+
+  for (let i = 0; i < screenshots.length; i++) {
+    const screenshot = screenshots[i];
+    const filename = `appstore-screenshot-${i + 1}.png`;
+    
     // Get per-screenshot device settings
     const { deviceScale, deviceOffsetY, deviceRotation, deviceShadow } =
       screenshot;
@@ -422,12 +476,15 @@ export const exportScreenshots = async ({
     // Draw overlay images in front of device
     await drawOverlayImages("front");
 
-    // Download
-    const link = document.createElement("a");
-    link.download = `appstore-screenshot-${screenshots.indexOf(screenshot) + 1}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+    // Add to exported files
+    const dataURL = canvas.toDataURL("image/png");
+    exportedFiles.push({ name: filename, data: dataURL });
+  }
 
-    await new Promise((r) => setTimeout(r, 500));
+  // Download: single file directly, multiple files as ZIP
+  if (exportedFiles.length === 1) {
+    downloadFile(exportedFiles[0].data, exportedFiles[0].name);
+  } else if (exportedFiles.length > 1) {
+    await downloadAsZip(exportedFiles);
   }
 };
