@@ -24,8 +24,9 @@
  * } from './components/DeviceFrame';
  */
 
-// Main component
+// Main components
 export { DeviceFrame } from "./DeviceFrame";
+export { DeviceFrame3D } from "./DeviceFrame3D";
 
 // Sub-components (for advanced customization)
 export { ScreenContent } from "./ScreenContent";

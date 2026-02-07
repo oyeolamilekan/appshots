@@ -116,4 +116,6 @@ export const SLIDER_RANGES = {
   shadowOffset: { min: -50, max: 50 },
   imageSize: { min: 5, max: 100 },
   imageRotation: { min: 0, max: 360 },
+  device3dRotateY: { min: -45, max: 45 },
+  device3dRotateX: { min: -30, max: 30 },
 } as const;
