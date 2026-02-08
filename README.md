@@ -9,15 +9,65 @@ A free, open-source tool to create stunning, high-converting screenshots for the
 
 ## ✨ Features
 
-- 🎨 **Visual Editor** - Intuitive drag-and-drop interface for designing screenshots
-- 📱 **Device Frames** - Realistic iPhone and Android device mockups
-- 🖼️ **Multiple Screenshots** - Create and manage multiple screenshots in one session
-- 🎯 **Customizable Elements** - Headlines, subheadlines, overlay images with full positioning control
-- 🎨 **Background Options** - Solid colors, gradients, and custom backgrounds
-- 📝 **Rich Text Editor** - Format your headlines with style
-- 🔤 **Google Fonts** - Access to hundreds of fonts for your text
-- 💾 **Export** - Download your screenshots at App Store resolution
-- 🌙 **Dark Mode** - Easy on the eyes with a sleek dark interface
+### 📱 Device Frames
+
+- **6 realistic device mockups** — iPhone 15 Pro Max, iPhone 15 Pro, iPhone 14, iPad Pro 12.9", Samsung Galaxy S24 Ultra, Samsung Galaxy Tab S9
+- **Multiple color options per device** — Black Titanium, Natural, Blue, White, and more
+- **Flat & 3D rendering modes** — toggle between a classic 2D frame and a perspective 3D view with visible device edges
+- **3D rotation controls** — adjust Rotate Y and Rotate X angles for the perfect perspective
+- **Accurate camera elements** — Dynamic Island, notch, and punch-hole camera matching each device
+
+### 🎨 Backgrounds & Appearance
+
+- **Solid color backgrounds** with a full color picker
+- **Gradient presets** — Sunset, Ocean, Mint, Berry, Royal, Rose
+- **Screenshot image upload** — drop in your app's actual screenshot
+- **Global text color picker**
+
+### 📝 Rich Text & Fonts
+
+- **Rich text editor** for headlines and subheadlines — bold, italic, underline, text color, alignment (left/center/right)
+- **Google Fonts integration** — search and preview hundreds of fonts
+- **Independent sizing** — separate font size sliders for headline and subheadline
+- **Width control** — set how wide each text block spans
+- **Drag-to-reposition** — click and drag headlines or subheadlines anywhere on the canvas
+
+### 🖼️ Overlay Images
+
+- **Unlimited overlay images** — upload badges, logos, arrows, or decorations
+- **Drag-to-reposition** and **resize** with width percentage control
+- **Rotation control** per image
+- **Layer management** — place behind or in front of the device, reorder with bring forward/backward/to-front/to-back
+- **Per-image shadow** — enable/disable with color, blur, and offset controls
+
+### 📐 Layout & Positioning
+
+- **8 position presets** — Centered, Bleed Bottom, Bleed Top, Float Center, Float Bottom, Tilt Left, Tilt Right, Perspective
+- **Device size** slider (scale %)
+- **Device vertical position** slider (offset %)
+- **Device rotation** (flat mode) or **3D rotation** (3D mode)
+- **Device shadow** — toggle on/off with color, blur, and vertical offset controls
+
+### 📋 Project Management
+
+- **Multiple projects** — create, rename, switch between, and delete projects
+- **Auto-save** — all projects and settings persist to localStorage across sessions
+- **Reset to defaults** — clear everything and start fresh
+
+### 📦 Export
+
+- **Batch export** — export all screenshots at once (ZIP for multiple, PNG for single)
+- **4 export size presets** — 6.7" iPhone, 6.5" iPhone, 5.5" iPhone, 12.9" iPad Pro
+- **Full 3D support** — 3D perspective, edges, and shadows are preserved in exports
+- **Pixel-perfect** — exported images match the on-screen preview
+
+### 🖥️ Editor Experience
+
+- **Multi-screenshot gallery** — add, remove, and navigate screenshots in a horizontal carousel
+- **Real-time preview** — all changes update instantly on the canvas
+- **Drag-and-drop** — reposition any element by dragging directly on the canvas
+- **Element selection** — click to select text or overlay images with visual feedback
+- **Dark mode UI** — sleek dark interface that's easy on the eyes
 
 ## 🚀 Quick Start
 
@@ -64,35 +114,45 @@ The built files will be in the `dist/` directory.
 
 ```
 src/
-├── components/          # React components
-│   ├── CanvasPreview.tsx    # Main canvas with screenshot previews
-│   ├── DeviceFrame.tsx      # iPhone device mockup
-│   ├── EditorLayout.tsx     # Main editor layout
-│   ├── FontPicker.tsx       # Google Fonts selector
-│   ├── LeftSidebar.tsx      # Tools and options sidebar
-│   ├── RichTextEditor.tsx   # Text formatting editor
-│   ├── RightSidebar.tsx     # Properties panel
+├── components/
+│   ├── CanvasPreview/       # Main canvas, screenshot cards, device container, overlays
+│   ├── DeviceFrame/         # Device mockups (flat 2D & 3D with edges)
+│   ├── FontPicker/          # Google Fonts search & selection
+│   ├── LeftSidebar/         # Device picker, color picker, export controls
+│   ├── ProjectSwitcher/     # Project management UI
+│   ├── RichTextEditor/      # Rich text formatting toolbar & editor
+│   ├── RightSidebar/        # Layout, appearance, content, overlay controls
+│   ├── EditorLayout.tsx     # Main editor layout shell
 │   └── Seo.tsx              # SEO meta tags
-├── context/             # React context providers
-│   └── EditorContext.tsx    # Editor state management
-├── lib/                 # Utility functions
-│   └── google-fonts.ts      # Google Fonts loader
-├── routes/              # TanStack Router pages
+├── context/
+│   └── EditorContext.tsx     # Global editor state & actions
+├── lib/
+│   ├── export-utils.ts      # Canvas-based screenshot export (flat & 3D)
+│   ├── google-fonts.ts      # Google Fonts API loader
+│   ├── rich-text-canvas.ts  # Rich text rendering for canvas export
+│   └── useLocalStorage.ts   # Persistence hooks
+├── routes/
 │   ├── __root.tsx           # Root layout
 │   └── index.tsx            # Home page
-├── types/               # TypeScript type definitions
-├── main.tsx             # Application entry point
-└── styles.css           # Global styles
+├── types/                   # TypeScript type definitions
+├── constants.ts             # Device specs, gradients, export sizes
+├── main.tsx                 # Application entry point
+└── styles.css               # Global styles
 ```
 
 ## 🎯 Usage
 
-1. **Add Screenshot** - Click "Add Screenshot" to create a new canvas
-2. **Upload Device Screenshot** - Add your app's screenshot to the device frame
-3. **Edit Text** - Click on headlines/subheadlines to edit them
-4. **Customize** - Use the sidebars to adjust colors, fonts, positioning
-5. **Add Overlays** - Upload additional images to enhance your design
-6. **Export** - Download your finished screenshots
+1. **Select a device** — pick from iPhones, iPads, or Samsung devices in the left sidebar
+2. **Choose a color** — select a device frame color
+3. **Upload a screenshot** — add your app's screenshot to the device screen
+4. **Edit text** — click headlines/subheadlines to type, use the rich text toolbar to format
+5. **Pick a font** — browse Google Fonts to find the perfect typeface
+6. **Set a background** — choose a solid color or gradient preset
+7. **Position the device** — use presets or manually adjust size, position, rotation
+8. **Switch to 3D** — toggle to 3D mode and adjust perspective angles
+9. **Add overlays** — upload badges, logos, or decorations and layer them around the device
+10. **Manage screenshots** — add more screenshots to create a complete set
+11. **Export** — download all screenshots at App Store resolution
 
 ## 🧪 Testing
 

@@ -23,9 +23,9 @@ interface DeviceFrame3DProps {
 }
 
 /** Total depth of the 3D extrusion in pixels */
-const EDGE_DEPTH = 14;
+const EDGE_DEPTH = 28;
 /** Number of slices used to build the extruded edge */
-const SLICE_COUNT = 12;
+const SLICE_COUNT = 20;
 
 /**
  * DeviceFrame3D - Renders a 3D device with smooth rounded edges
@@ -116,9 +116,9 @@ export const DeviceFrame3D = ({ screenshot }: DeviceFrame3DProps) => {
         </div>
 
         {isSamsungDevice ? (
-          <SamsungButtons color={selectedColor} />
+          <SamsungButtons color={selectedColor} is3d />
         ) : (
-          <IPhoneButtons color={selectedColor} />
+          <IPhoneButtons color={selectedColor} is3d />
         )}
       </div>
     </div>
