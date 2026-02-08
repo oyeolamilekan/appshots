@@ -2,7 +2,7 @@
 
 A free, open-source tool to create stunning, high-converting screenshots for the Apple App Store and Google Play Store in minutes. Design professional app previews with an intuitive drag-and-drop editor.
 
-🔗 **Live Demo:** [shots.appstate.xyz](https://shots.appstate.xyz/)
+🔗 **Live Demo:** [appshots.appstate.xyz](https://appshots.appstate.xyz/)
 
 ![App Store Screenshot Generator](public/demo-image.png)
 
@@ -109,7 +109,7 @@ The built files will be in the `dist/` directory.
 - **Routing**: [TanStack Router](https://tanstack.com/router)
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
 - **Icons**: [Lucide React](https://lucide.dev/)
-- **SEO**: [React Helmet Async](https://github.com/staylor/react-helmet-async)
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
 - **Build Tool**: [Vite 7](https://vitejs.dev/)
 - **Testing**: [Vitest](https://vitest.dev/)
 - **Runtime**: [Bun](https://bun.sh/)
@@ -127,7 +127,7 @@ src/
 │   ├── RichTextEditor/      # Rich text formatting toolbar & editor
 │   ├── RightSidebar/        # Layout, appearance, content, overlay controls
 │   ├── EditorLayout.tsx     # Main editor layout shell
-│   └── Seo.tsx              # SEO meta tags
+│   └── ui/                  # shadcn/ui components
 ├── context/
 │   └── EditorContext.tsx     # Global editor state & actions
 ├── lib/
