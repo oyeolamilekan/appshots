@@ -25,7 +25,6 @@ A free, open-source tool to create stunning, high-converting screenshots for the
 
 - **Solid color backgrounds** with a full color picker
 - **Gradient presets** — Sunset, Ocean, Mint, Berry, Royal, Rose
-- **Screenshot image upload** — drop in your app's actual screenshot
 - **Global text color picker**
 
 ### 📝 Rich Text & Fonts
@@ -43,6 +42,10 @@ A free, open-source tool to create stunning, high-converting screenshots for the
 - **Rotation control** per image
 - **Layer management** — place behind or in front of the device, reorder with bring forward/backward/to-front/to-back
 - **Per-image shadow** — enable/disable with color, blur, and offset controls
+
+### 📸 Screenshot Image
+
+- **Upload your app screenshot** — drop in your actual app screenshot to display inside the device frame
 
 ### 📐 Layout & Positioning
 

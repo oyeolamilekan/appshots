@@ -13,6 +13,7 @@
 
 import { useEditor } from "../../context/EditorContext";
 import { gradientPresets } from "../../constants";
+import { ScreenshotImageSection } from "./ScreenshotImageSection";
 import { PositionPresets } from "./PositionPresets";
 import { LayoutSection } from "./LayoutSection";
 import { ContentSection } from "./ContentSection";
@@ -55,6 +56,12 @@ export const RightSidebar = () => {
   return (
     <aside className={STYLES.sidebar}>
       <div className={STYLES.content}>
+        <ScreenshotImageSection
+          screenshot={activeScreenshot}
+          fileInputRef={fileInputRef}
+          onFileUpload={handleFileUpload}
+        />
+
         <PositionPresets
           screenshot={activeScreenshot}
           onUpdateScreenshot={updateActiveScreenshot}
@@ -77,10 +84,8 @@ export const RightSidebar = () => {
         <AppearanceSection
           screenshot={activeScreenshot}
           gradientPresets={gradientPresets}
-          fileInputRef={fileInputRef}
           onUpdateScreenshot={updateActiveScreenshot}
           onOpenFontPicker={() => setIsFontPickerOpen(true)}
-          onFileUpload={handleFileUpload}
         />
 
         <OverlayImagesSection
