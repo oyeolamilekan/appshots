@@ -2,6 +2,10 @@
 
 A free, open-source tool to create stunning, high-converting screenshots for the Apple App Store and Google Play Store in minutes. Design professional app previews with an intuitive drag-and-drop editor.
 
+🔗 **Live Demo:** [shots.appstate.xyz](https://shots.appstate.xyz/)
+
+![App Store Screenshot Generator](public/demo-image.png)
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript)
@@ -153,16 +157,6 @@ src/
 9. **Add overlays** — upload badges, logos, or decorations and layer them around the device
 10. **Manage screenshots** — add more screenshots to create a complete set
 11. **Export** — download all screenshots at App Store resolution
-
-## 🧪 Testing
-
-```bash
-# Run tests
-bun run test
-
-# Run tests in watch mode
-bun run test --watch
-```
 
 ## 🤝 Contributing
 
