@@ -63,7 +63,7 @@ const downloadAsZip = async (files: { name: string; data: string }[]) => {
 
 // --- 3D Export Helpers ---
 
-const EXPORT_EDGE_DEPTH = 28; // Must match DeviceFrame3D EDGE_DEPTH
+const EXPORT_EDGE_DEPTH = 16; // Must match DeviceFrame3D EDGE_DEPTH
 
 interface Point2D {
   x: number;
@@ -262,57 +262,6 @@ const renderDeviceToOffscreen = async (
   const dY = 0;
   const dW = deviceWidthPx;
   const dH = deviceHeightPx;
-  const btnWidth = dW * 0.008;
-  const btnRadius = 2 * scaleX;
-
-  // --- Draw buttons ---
-  const drawButton = (
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    isRight: boolean,
-  ) => {
-    ctx.save();
-    if (selectedColor.frameColors) {
-      const btnGradient = ctx.createLinearGradient(x, y, x + w, y);
-      const c1 = selectedColor.frameColors[2];
-      const c2 = selectedColor.frameColors[0];
-      if (isRight) {
-        btnGradient.addColorStop(0, c1);
-        btnGradient.addColorStop(1, c2);
-      } else {
-        btnGradient.addColorStop(0, c2);
-        btnGradient.addColorStop(1, c1);
-      }
-      ctx.fillStyle = btnGradient;
-    } else {
-      ctx.fillStyle = selectedColor.frame;
-    }
-    ctx.shadowColor = "rgba(0,0,0,0.2)";
-    ctx.shadowBlur = 4 * scaleX;
-    ctx.shadowOffsetX = isRight ? 2 * scaleX : -2 * scaleX;
-    ctx.shadowOffsetY = 0;
-    ctx.beginPath();
-    if (isRight) {
-      ctx.roundRect(x, y, w, h, [0, btnRadius, btnRadius, 0]);
-    } else {
-      ctx.roundRect(x, y, w, h, [btnRadius, 0, 0, btnRadius]);
-    }
-    ctx.fill();
-    ctx.restore();
-  };
-
-  if (isSamsung) {
-    drawButton(dX + dW, dY + dH * 0.22, btnWidth, dH * 0.05, true);
-    drawButton(dX + dW, dY + dH * 0.29, btnWidth, dH * 0.06, true);
-    drawButton(dX + dW, dY + dH * 0.36, btnWidth, dH * 0.06, true);
-  } else {
-    drawButton(dX + dW, dY + dH * 0.18, btnWidth, dH * 0.08, true);
-    drawButton(dX - btnWidth, dY + dH * 0.15, btnWidth, dH * 0.04, false);
-    drawButton(dX - btnWidth, dY + dH * 0.21, btnWidth, dH * 0.06, false);
-    drawButton(dX - btnWidth, dY + dH * 0.28, btnWidth, dH * 0.06, false);
-  }
 
   // --- Draw frame ---
   ctx.save();
@@ -727,6 +676,69 @@ export const exportScreenshots = async ({
 
           ctx.restore();
         }
+      }
+
+      // 4. Draw 3D buttons — small raised bumps on the device edge
+      const btnWidthPx = deviceWidthPx * 0.006;
+
+      const draw3DButton = (
+        side: "left" | "right",
+        topPct: number,
+        heightPct: number,
+      ) => {
+        const isRight = side === "right";
+        const btnH = deviceHeightPx * heightPct;
+        const btnTopY = -halfH + deviceHeightPx * topPct;
+        const btnBotY = btnTopY + btnH;
+
+        // Button sits flush on the edge, protruding slightly outward
+        const btnZFront = halfEdge + 2;
+        const btnXInner = isRight ? halfW - 1 : -halfW + 1;
+        const btnXOuter = isRight ? halfW + btnWidthPx : -halfW - btnWidthPx;
+
+        // Single projected quad for the button face
+        const p0 = project3DPoint(btnXInner, btnTopY, btnZFront, ryRad, rxRad, perspective, deviceCenterX, deviceCenterY);
+        const p1 = project3DPoint(btnXOuter, btnTopY, btnZFront, ryRad, rxRad, perspective, deviceCenterX, deviceCenterY);
+        const p2 = project3DPoint(btnXOuter, btnBotY, btnZFront, ryRad, rxRad, perspective, deviceCenterX, deviceCenterY);
+        const p3 = project3DPoint(btnXInner, btnBotY, btnZFront, ryRad, rxRad, perspective, deviceCenterX, deviceCenterY);
+
+        ctx.save();
+        if (selectedColor.frameColors) {
+          const gradient = ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
+          gradient.addColorStop(0, selectedColor.frameColors[1]);
+          gradient.addColorStop(1, selectedColor.frameColors[2]);
+          ctx.fillStyle = gradient;
+        } else {
+          ctx.fillStyle = selectedColor.frame;
+        }
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Subtle highlight
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fill();
+
+        // Thin outline
+        ctx.strokeStyle = "rgba(0,0,0,0.12)";
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      if (isSamsungDevice) {
+        draw3DButton("right", 0.22, 0.05);
+        draw3DButton("right", 0.29, 0.06);
+        draw3DButton("right", 0.36, 0.06);
+      } else {
+        draw3DButton("right", 0.18, 0.08);
+        draw3DButton("left", 0.15, 0.04);
+        draw3DButton("left", 0.21, 0.06);
+        draw3DButton("left", 0.28, 0.06);
       }
     } else {
       // --- Flat Device Export (existing behavior) ---

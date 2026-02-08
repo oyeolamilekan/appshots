@@ -23,7 +23,7 @@ interface DeviceFrame3DProps {
 }
 
 /** Total depth of the 3D extrusion in pixels */
-const EDGE_DEPTH = 28;
+const EDGE_DEPTH = 16;
 /** Number of slices used to build the extruded edge */
 const SLICE_COUNT = 20;
 
