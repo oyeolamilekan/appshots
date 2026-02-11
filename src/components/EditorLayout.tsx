@@ -24,7 +24,7 @@ export const EditorLayout = () => {
           <span>
             AppShots is open source —{" "}
             <a
-              href="https://github.com/oyeolamilekan/app-screenshot-generator"
+              href="https://github.com/oyeolamilekan/appshots"
               target="_blank"
               rel="noopener noreferrer"
               className="text-white underline underline-offset-2 hover:text-zinc-100"
