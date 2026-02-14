@@ -1,0 +1,149 @@
+# AppShots App Store Screenshot Generator
+
+> AppShots is a free, open-source web tool for creating professional, high-converting screenshots for the Apple App Store and Google Play Store. It provides a full-featured drag-and-drop editor with device mockups, rich text, overlays, and batch export.
+
+Website: https://appshots.appstate.xyz
+GitHub: https://github.com/oyeolamilekan/appshots
+License: MIT
+
+## What AppShots Does
+
+AppShots lets mobile developers and marketers design polished app store screenshots entirely in the browser. Users select a device frame, upload their app screenshot, add text and decorations, and export pixel-perfect images at the required App Store or Play Store resolutions. Everything runs client-side — no server uploads, no accounts, no watermarks.
+
+## Core Features
+
+### Device Frames
+- 6 realistic device mockups: iPhone 15 Pro Max, iPhone 15 Pro, iPhone 14, iPad Pro 12.9", Samsung Galaxy S24 Ultra, Samsung Galaxy Tab S9
+- Multiple color options per device (Black Titanium, Natural, Blue, White, Midnight, Purple, Red, Space Gray, Silver, Titanium Violet, Titanium Yellow, Graphite, Beige)
+- Flat (2D) and 3D rendering modes
+- 3D rotation controls for Rotate Y and Rotate X
+- Accurate camera elements (Dynamic Island, notch, punch-hole)
+
+### Backgrounds
+- Solid color backgrounds with a full color picker
+- 6 gradient presets: Sunset, Ocean, Mint, Berry, Royal, Rose
+- Global text color picker
+
+### Rich Text & Fonts
+- Rich text editor for headlines and subheadlines with bold, italic, underline, text color, and alignment
+- Google Fonts integration with search and preview
+- Independent font size sliders for headline and subheadline
+- Width control for text blocks
+- Drag-to-reposition text anywhere on the canvas
+
+### Overlay Images
+- Unlimited overlay images (badges, logos, arrows, decorations)
+- Drag-to-reposition and resize with width percentage control
+- Per-image rotation control
+- Layer management: behind device, in front, bring forward/backward/to-front/to-back
+- Per-image shadow with color, blur, and offset controls
+
+### Layout & Positioning
+- 8 position presets: Centered, Bleed Bottom, Bleed Top, Float Center, Float Bottom, Tilt Left, Tilt Right, Perspective
+- Device size slider (scale %)
+- Device vertical position slider (offset %)
+- Device rotation (flat) or 3D rotation (3D mode)
+- Device shadow toggle with color, blur, and vertical offset
+
+### Project Management
+- Multiple projects: create, rename, switch, delete
+- Auto-save to localStorage across sessions
+- Reset to defaults
+
+### Export
+- Batch export: all screenshots at once (ZIP for multiple, PNG for single)
+- 4 export size presets: 6.7" iPhone (1284×2778), 6.5" iPhone (1242×2688), 5.5" iPhone (1242×2208), 12.9" iPad Pro (2048×2732)
+- Full 3D support preserved in exports
+- Pixel-perfect output matching on-screen preview
+
+### Editor Experience
+- Multi-screenshot gallery with horizontal carousel
+- Real-time preview with instant updates
+- Drag-and-drop repositioning for all elements
+- Click-to-select with visual feedback
+- Dark mode UI
+
+## Tech Stack
+
+- React 19
+- TanStack Router (file-based routing)
+- Tailwind CSS 4
+- Lucide React (icons)
+- shadcn/ui (UI components)
+- Vite 7 (build tool)
+- Vitest (testing)
+- Bun (runtime)
+- JSZip (batch export)
+- Canvas API (screenshot rendering and export)
+
+## Architecture
+
+AppShots is a single-page application. All state is managed client-side with React Context (EditorContext) and persisted to localStorage.
+
+### Key Modules
+- `EditorContext` — Global editor state: active project, screenshots, device selection, font settings
+- `CanvasPreview` — Main canvas rendering screenshots, device containers, overlays
+- `DeviceFrame` — Device mockup rendering in flat 2D and 3D with edges
+- `FontPicker` — Google Fonts search, preview, and selection
+- `LeftSidebar` — Device picker, color picker, export controls
+- `RightSidebar` — Layout, appearance, content, and overlay controls
+- `RichTextEditor` — Rich text formatting toolbar
+- `ProjectSwitcher` — Project management UI
+- `export-utils` — Canvas-based screenshot export supporting flat and 3D
+- `google-fonts` — Google Fonts API loader
+- `rich-text-canvas` — Rich text rendering for canvas export
+
+### Data Model
+- **Project**: Contains a name, device selection, export size, and a list of Screenshots
+- **Screenshot**: Headline, subheadline, screenshot image, background settings, text positions, font family, overlay images, device scale/offset/rotation/shadow, 3D settings
+- **ImageOverlay**: Positioned image with layer ordering, rotation, and shadow
+- **DeviceSpec**: Device dimensions, screen inset, corner radius, notch/island info, available colors
+
+## Typical Workflow
+
+1. Select a device from the left sidebar
+2. Choose a device frame color
+3. Upload an app screenshot to display inside the device
+4. Edit headline and subheadline text using the rich text editor
+5. Pick a font from Google Fonts
+6. Set background color or gradient
+7. Position the device with presets or manual controls
+8. Optionally switch to 3D mode and adjust rotation
+9. Add overlay images (badges, logos)
+10. Add more screenshots to the carousel for a complete set
+11. Export all screenshots at App Store resolution
+
+## API / Integration Points
+
+AppShots is entirely client-side. There are no backend APIs. Data flows:
+- Google Fonts API — loads font metadata and stylesheets
+- Canvas API — renders and exports screenshots as PNG
+- localStorage — persists projects and settings
+- JSZip — bundles multiple screenshots into a ZIP file for download
+
+## Running Locally
+
+Prerequisites: Bun (recommended) or Node.js 18+
+
+```
+git clone https://github.com/oyeolamilekan/appshots.git
+cd app-screenshot-generator
+bun install
+bun run dev
+```
+
+Available at http://localhost:5173
+
+## Export Sizes Reference
+
+| Preset | Dimensions | Use Case |
+|--------|-----------|----------|
+| 6.7" | 1284 × 2778 | iPhone 13/12 Pro Max |
+| 6.5" | 1242 × 2688 | iPhone 11 Pro Max |
+| 5.5" | 1242 × 2208 | iPhone 8 Plus |
+| 12.9" | 2048 × 2732 | iPad Pro |
+
+## Contributing
+
+Fork → create feature branch → commit → push → open Pull Request.
+See CONTRIBUTING guidelines in the repository.
