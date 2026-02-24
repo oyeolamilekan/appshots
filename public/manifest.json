@@ -1,6 +1,6 @@
 {
-  "short_name": "TanStack App",
-  "name": "Create TanStack App Sample",
+  "short_name": "AppShots",
+  "name": "AppShots - App Store & Google Play Screenshot Generator",
   "icons": [
     {
       "src": "favicon.ico",
