@@ -120,6 +120,15 @@ const createDefaultScreenshot = (): Screenshot => ({
   backgroundColor: "#8b5cf6",
   backgroundMode: "solid",
   gradientPresetId: null,
+  gradientFrom: "#ff7e5f",
+  gradientTo: "#feb47b",
+  gradientStops: [
+    { id: "s1", color: "#ff7e5f", position: 0 },
+    { id: "s2", color: "#feb47b", position: 100 },
+  ],
+  gradientType: "linear",
+  gradientAngle: 180,
+  backgroundNoise: 0,
   textColor: "#ffffff",
   headlineX: 50,
   headlineY: 10,
@@ -379,6 +388,12 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       backgroundColor: activeScreenshot.backgroundColor,
       backgroundMode: activeScreenshot.backgroundMode,
       gradientPresetId: activeScreenshot.gradientPresetId,
+      gradientFrom: activeScreenshot.gradientFrom,
+      gradientTo: activeScreenshot.gradientTo,
+      gradientStops: activeScreenshot.gradientStops.map((s) => ({ ...s })),
+      gradientType: activeScreenshot.gradientType,
+      gradientAngle: activeScreenshot.gradientAngle,
+      backgroundNoise: activeScreenshot.backgroundNoise,
       textColor: activeScreenshot.textColor,
       headlineX: 50,
       headlineY: 10,
@@ -668,10 +683,22 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
 
   const getBackgroundStyle = (screenshot: Screenshot) => {
     if (screenshot.backgroundMode === "gradient") {
-      const preset =
-        gradientPresets.find((p) => p.id === screenshot.gradientPresetId) ??
-        gradientPresets[0];
-      return `linear-gradient(180deg, ${preset.from}, ${preset.to})`;
+      const type = screenshot.gradientType ?? "linear";
+      // Use gradientStops if available, fallback to gradientFrom/gradientTo for old data
+      const stops =
+        screenshot.gradientStops && screenshot.gradientStops.length >= 2
+          ? screenshot.gradientStops
+          : [
+              { id: "f", color: screenshot.gradientFrom ?? gradientPresets[0].from, position: 0 },
+              { id: "t", color: screenshot.gradientTo ?? gradientPresets[0].to, position: 100 },
+            ];
+      const sorted = [...stops].sort((a, b) => a.position - b.position);
+      const colorStops = sorted.map((s) => `${s.color} ${s.position}%`).join(", ");
+      if (type === "radial") {
+        return `radial-gradient(circle at center, ${colorStops})`;
+      }
+      const angle = screenshot.gradientAngle ?? 180;
+      return `linear-gradient(${angle}deg, ${colorStops})`;
     }
     return screenshot.backgroundColor;
   };

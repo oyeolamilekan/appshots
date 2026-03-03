@@ -235,12 +235,12 @@ export const devices: DeviceSpec[] = [
 ];
 
 export const gradientPresets: GradientPreset[] = [
-  { id: "sunset", label: "Sunset", from: "#ff7e5f", to: "#feb47b" },
-  { id: "ocean", label: "Ocean", from: "#2b5876", to: "#4e4376" },
-  { id: "mint", label: "Mint", from: "#00b09b", to: "#96c93d" },
-  { id: "berry", label: "Berry", from: "#e1eec3", to: "#f05053" },
-  { id: "royal", label: "Royal", from: "#141E30", to: "#243B55" },
-  { id: "rose", label: "Rose", from: "#f4c4f3", to: "#fc67fa" },
+  { id: "sunset", label: "Sunset", from: "#ff7e5f", to: "#feb47b", stops: [{ id: "s1", color: "#ff7e5f", position: 0 }, { id: "s2", color: "#feb47b", position: 100 }] },
+  { id: "ocean", label: "Ocean", from: "#2b5876", to: "#4e4376", stops: [{ id: "s1", color: "#2b5876", position: 0 }, { id: "s2", color: "#4e4376", position: 100 }] },
+  { id: "mint", label: "Mint", from: "#00b09b", to: "#96c93d", stops: [{ id: "s1", color: "#00b09b", position: 0 }, { id: "s2", color: "#96c93d", position: 100 }] },
+  { id: "berry", label: "Berry", from: "#e1eec3", to: "#f05053", stops: [{ id: "s1", color: "#e1eec3", position: 0 }, { id: "s2", color: "#f05053", position: 100 }] },
+  { id: "royal", label: "Royal", from: "#141E30", to: "#243B55", stops: [{ id: "s1", color: "#141E30", position: 0 }, { id: "s2", color: "#243B55", position: 100 }] },
+  { id: "rose", label: "Rose", from: "#f4c4f3", to: "#fc67fa", stops: [{ id: "s1", color: "#f4c4f3", position: 0 }, { id: "s2", color: "#fc67fa", position: 100 }] },
 ];
 
 export const exportSizes: ExportSize[] = [

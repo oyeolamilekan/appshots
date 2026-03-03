@@ -8,6 +8,7 @@ import { ChevronDown } from "lucide-react";
 import type { Screenshot, GradientPreset } from "../../types";
 import { SidebarSection } from "./SidebarSection";
 import { BackgroundPicker } from "./BackgroundPicker";
+import { HexColorInput } from "./HexColorInput";
 import { STYLES } from "./constants";
 
 interface AppearanceSectionProps {
@@ -46,11 +47,9 @@ export const AppearanceSection = ({
       {/* Text Color */}
       <div>
         <label className="block text-xs text-gray-400 mb-1">Text Color</label>
-        <input
-          type="color"
+        <HexColorInput
           value={screenshot.textColor}
-          onChange={(e) => onUpdateScreenshot({ textColor: e.target.value })}
-          className={STYLES.colorInput}
+          onChange={(color) => onUpdateScreenshot({ textColor: color })}
         />
       </div>
 

@@ -118,4 +118,6 @@ export const SLIDER_RANGES = {
   imageRotation: { min: 0, max: 360 },
   device3dRotateY: { min: -45, max: 45 },
   device3dRotateX: { min: -30, max: 30 },
+  gradientAngle: { min: 0, max: 360 },
+  backgroundNoise: { min: 0, max: 100 },
 } as const;

@@ -6,7 +6,8 @@
 
 import { Toggle } from "./Toggle";
 import { RangeSlider } from "./RangeSlider";
-import { STYLES, SLIDER_RANGES } from "./constants";
+import { HexColorInput } from "./HexColorInput";
+import { SLIDER_RANGES } from "./constants";
 import type { ShadowControlsProps } from "./types";
 
 /**
@@ -38,12 +39,11 @@ export const ShadowControls = ({
     {shadow.enabled && (
       <>
         <div className="flex items-center gap-2">
-          <span className={STYLES.labelSmall}>Color</span>
-          <input
-            type="color"
+          <span className="text-xs text-gray-500">Color</span>
+          <HexColorInput
             value={shadow.color}
-            onChange={(e) => onColorChange(e.target.value)}
-            className={STYLES.colorInputSmall}
+            onChange={onColorChange}
+            compact
           />
         </div>
 

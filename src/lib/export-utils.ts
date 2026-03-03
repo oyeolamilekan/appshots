@@ -436,17 +436,67 @@ export const exportScreenshots = async ({
 
     // Draw background
     if (screenshot.backgroundMode === "gradient") {
-      const preset =
-        gradientPresets.find((p) => p.id === screenshot.gradientPresetId) ??
-        gradientPresets[0];
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, preset.from);
-      gradient.addColorStop(1, preset.to);
+      const from = screenshot.gradientFrom ?? gradientPresets[0].from;
+      const to = screenshot.gradientTo ?? gradientPresets[0].to;
+      const type = screenshot.gradientType ?? "linear";
+      let gradient: CanvasGradient;
+      if (type === "radial") {
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const radius = Math.max(canvas.width, canvas.height) / 2;
+        gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      } else {
+        const angle = screenshot.gradientAngle ?? 180;
+        const angleRad = ((angle - 90) * Math.PI) / 180;
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const len = Math.max(canvas.width, canvas.height) / 2;
+        gradient = ctx.createLinearGradient(
+          cx - Math.cos(angleRad) * len,
+          cy - Math.sin(angleRad) * len,
+          cx + Math.cos(angleRad) * len,
+          cy + Math.sin(angleRad) * len,
+        );
+      }
+      // Use gradientStops if available, fallback to from/to for old data
+      const stops =
+        screenshot.gradientStops && screenshot.gradientStops.length >= 2
+          ? [...screenshot.gradientStops].sort((a, b) => a.position - b.position)
+          : [
+              { id: "f", color: from, position: 0 },
+              { id: "t", color: to, position: 100 },
+            ];
+      for (const stop of stops) {
+        gradient.addColorStop(stop.position / 100, stop.color);
+      }
       ctx.fillStyle = gradient;
     } else {
       ctx.fillStyle = screenshot.backgroundColor;
     }
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw noise overlay
+    const noise = screenshot.backgroundNoise ?? 0;
+    if (noise > 0) {
+      const noiseCanvas = document.createElement("canvas");
+      noiseCanvas.width = canvas.width;
+      noiseCanvas.height = canvas.height;
+      const noiseCtx = noiseCanvas.getContext("2d")!;
+      const imageData = noiseCtx.createImageData(canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const v = Math.random() * 255;
+        data[i] = v;
+        data[i + 1] = v;
+        data[i + 2] = v;
+        data[i + 3] = 255;
+      }
+      noiseCtx.putImageData(imageData, 0, 0);
+      ctx.save();
+      ctx.globalAlpha = noise / 100;
+      ctx.drawImage(noiseCanvas, 0, 0);
+      ctx.restore();
+    }
 
     // Get font family
     const fontFamily = `'${screenshot.fontFamily}', sans-serif`;
