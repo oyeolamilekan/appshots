@@ -36,11 +36,18 @@ export type DeviceSpec = {
   colors: DeviceColor[];
 };
 
+export type GradientStop = {
+  id: string;
+  color: string;
+  position: number; // 0-100
+};
+
 export type GradientPreset = {
   id: string;
   label: string;
   from: string;
   to: string;
+  stops: GradientStop[];
 };
 
 export type ImageOverlay = {
@@ -63,6 +70,12 @@ export type Screenshot = {
   backgroundColor: string;
   backgroundMode: "solid" | "gradient" | "image";
   gradientPresetId: string | null;
+  gradientFrom: string;
+  gradientTo: string;
+  gradientStops: GradientStop[];
+  gradientType: "linear" | "radial";
+  gradientAngle: number;
+  backgroundNoise: number;
   textColor: string;
   headlineX: number;
   headlineY: number;
