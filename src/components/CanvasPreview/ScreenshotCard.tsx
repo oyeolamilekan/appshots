@@ -5,7 +5,8 @@
  */
 
 import type { RefObject } from "react";
-import type { Screenshot, ExportSize } from "../../types";
+import type { Screenshot, ExportSize, SelectedElement } from "../../types";
+import type { RenderableDevice } from "../../lib/device-overflow";
 import { RemoveButton } from "./RemoveButton";
 import { OverlayImage } from "./OverlayImage";
 import { TextElement } from "./TextElement";
@@ -13,14 +14,11 @@ import { DeviceContainer } from "./DeviceContainer";
 import { isElementSelected } from "./utils";
 import { Z_INDEX } from "./constants";
 
-interface SelectedElement {
-  type: string;
-  id?: string;
-}
-
 interface ScreenshotCardProps {
   /** Screenshot data */
   screenshot: Screenshot;
+  /** Devices visible in this screenshot, including overflow from neighbors */
+  renderableDevices: RenderableDevice[];
   /** Whether this screenshot is currently active */
   isActive: boolean;
   /** Whether this screenshot can be removed */
@@ -46,7 +44,8 @@ interface ScreenshotCardProps {
   /** Handler for element mouse down */
   onElementMouseDown: (
     e: React.MouseEvent,
-    type: "headline" | "subheadline" | "image",
+    type: "headline" | "subheadline" | "image" | "device",
+    screenshotId: string,
     id?: string,
   ) => void;
   /** Handler for element mouse up */
@@ -63,6 +62,7 @@ interface ScreenshotCardProps {
  */
 export const ScreenshotCard = ({
   screenshot,
+  renderableDevices,
   isActive,
   canRemove,
   selectedElement,
@@ -96,18 +96,19 @@ export const ScreenshotCard = ({
   return (
     <div
       ref={isActive ? previewRef : undefined}
+      data-screenshot-card="true"
       onClick={onSelect}
       onMouseUp={onElementMouseUp}
-      onMouseLeave={onElementMouseUp}
       onMouseDown={handleBackgroundMouseDown}
       className={`relative h-full rounded-xl overflow-hidden cursor-pointer transition-all ${
-        isActive
-          ? "ring-2 ring-white ring-offset-2 ring-offset-[#0a0a0a]"
-          : "opacity-70 hover:opacity-100"
+        isActive ? "opacity-100" : "opacity-70 hover:opacity-100"
       }`}
       style={{
         background: getBackgroundStyle(screenshot),
         aspectRatio: `${exportSize.width}/${exportSize.height}`,
+        boxShadow: isActive
+          ? "inset 0 0 0 2px rgba(255, 255, 255, 0.95)"
+          : undefined,
       }}
     >
       {/* Remove button */}
@@ -122,13 +123,15 @@ export const ScreenshotCard = ({
             image={image}
             zIndex={Z_INDEX.behindDevice + index}
             isSelected={isElementSelected(
-              isActive,
-              selectedElement,
+              isActive ? selectedElement : null,
               "image",
+              screenshot.id,
               image.id,
             )}
             isInteractive={isActive}
-            onMouseDown={(e) => onElementMouseDown(e, "image", image.id)}
+            onMouseDown={(e) =>
+              onElementMouseDown(e, "image", screenshot.id, image.id)
+            }
           />
         ))}
 
@@ -142,9 +145,12 @@ export const ScreenshotCard = ({
           fontSize={headlineFontSize / 3}
           color={screenshot.textColor}
           fontFamily={screenshot.fontFamily}
-          isSelected={isElementSelected(isActive, selectedElement, "headline")}
+          isSelected={
+            isActive &&
+            isElementSelected(selectedElement, "headline", screenshot.id)
+          }
           isInteractive={isActive}
-          onMouseDown={(e) => onElementMouseDown(e, "headline")}
+          onMouseDown={(e) => onElementMouseDown(e, "headline", screenshot.id)}
         />
 
         {/* Subheadline */}
@@ -157,17 +163,35 @@ export const ScreenshotCard = ({
           fontSize={subheadlineFontSize / 3}
           color={screenshot.textColor}
           fontFamily={screenshot.fontFamily}
-          isSelected={isElementSelected(
-            isActive,
-            selectedElement,
-            "subheadline",
-          )}
+          isSelected={
+            isActive &&
+            isElementSelected(selectedElement, "subheadline", screenshot.id)
+          }
           isInteractive={isActive}
-          onMouseDown={(e) => onElementMouseDown(e, "subheadline")}
+          onMouseDown={(e) =>
+            onElementMouseDown(e, "subheadline", screenshot.id)
+          }
         />
 
-        {/* Device */}
-        <DeviceContainer screenshot={screenshot} />
+        {/* Devices, including visible overflow from neighboring screenshots */}
+        {renderableDevices.map(({ device, localX, ownerScreenshotId }, index) => (
+          <DeviceContainer
+            key={`${ownerScreenshotId}-${device.id}`}
+            device={device}
+            renderX={localX}
+            zIndex={Z_INDEX.device + index}
+            isSelected={isElementSelected(
+              selectedElement,
+              "device",
+              ownerScreenshotId,
+              device.id,
+            )}
+            isInteractive
+            onMouseDown={(e) =>
+              onElementMouseDown(e, "device", ownerScreenshotId, device.id)
+            }
+          />
+        ))}
 
         {/* Overlay images in front of device */}
         {frontImages.map((image, index) => (
@@ -176,13 +200,15 @@ export const ScreenshotCard = ({
             image={image}
             zIndex={Z_INDEX.frontDevice + index}
             isSelected={isElementSelected(
-              isActive,
-              selectedElement,
+              isActive ? selectedElement : null,
               "image",
+              screenshot.id,
               image.id,
             )}
             isInteractive={isActive}
-            onMouseDown={(e) => onElementMouseDown(e, "image", image.id)}
+            onMouseDown={(e) =>
+              onElementMouseDown(e, "image", screenshot.id, image.id)
+            }
           />
         ))}
       </div>

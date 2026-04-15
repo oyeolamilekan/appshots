@@ -10,8 +10,7 @@
  */
 
 import { useMemo } from "react";
-import { useEditor } from "../../context/EditorContext";
-import type { Screenshot } from "../../types";
+import type { DeviceColor, DeviceInstance, DeviceSpec } from "../../types";
 import { SHADOWS } from "./constants";
 import { getFrameBackground } from "./utils";
 import { ScreenContent } from "./ScreenContent";
@@ -19,7 +18,9 @@ import { CameraElement } from "./CameraElements";
 import { IPhoneButtons, SamsungButtons } from "./DeviceButtons";
 
 interface DeviceFrame3DProps {
-  screenshot: Screenshot;
+  device: DeviceInstance;
+  selectedDevice: DeviceSpec;
+  selectedColor: DeviceColor;
 }
 
 /** Total depth of the 3D extrusion in pixels */
@@ -35,9 +36,11 @@ const SLICE_COUNT = 20;
  * Each slice shares the device's border-radius, so corners are
  * always smooth and perfectly matched.
  */
-export const DeviceFrame3D = ({ screenshot }: DeviceFrame3DProps) => {
-  const { selectedDevice, selectedColor } = useEditor();
-
+export const DeviceFrame3D = ({
+  device,
+  selectedDevice,
+  selectedColor,
+}: DeviceFrame3DProps) => {
   const isSamsungDevice = selectedDevice.id.startsWith("samsung-");
   const isSamsungTablet = selectedDevice.id.includes("tab");
 
@@ -107,7 +110,7 @@ export const DeviceFrame3D = ({ screenshot }: DeviceFrame3DProps) => {
           className="relative w-full h-full overflow-hidden"
           style={screenStyle}
         >
-          <ScreenContent screenshotSrc={screenshot.screenshotSrc} />
+          <ScreenContent screenshotSrc={device.screenshotSrc} />
           <CameraElement
             device={selectedDevice}
             isSamsung={isSamsungDevice}

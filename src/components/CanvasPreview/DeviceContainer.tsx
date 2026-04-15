@@ -5,58 +5,92 @@
  * Supports both flat (2D) and 3D device rendering styles.
  */
 
-import type { Screenshot } from "../../types";
+import type { DeviceInstance } from "../../types";
+import { SelectionHandles } from "./SelectionHandles";
 import { DeviceFrame } from "../DeviceFrame";
 import { DeviceFrame3D } from "../DeviceFrame/DeviceFrame3D";
-import { getDropShadowFilter } from "./utils";
-import { Z_INDEX } from "./constants";
+import { getDeviceSelectionStyles, getDropShadowFilter } from "./utils";
+import { getDeviceColorById, getDeviceSpecById } from "../../lib/device-instances";
 
 interface DeviceContainerProps {
-  /** Screenshot data containing device settings */
-  screenshot: Screenshot;
+  /** Device instance data containing render settings */
+  device: DeviceInstance;
+  /** Horizontal position override in screenshot-local percent */
+  renderX?: number;
+  /** Z-index for stacking order */
+  zIndex: number;
+  /** Whether this device is selected */
+  isSelected: boolean;
+  /** Whether mouse interactions are enabled */
+  isInteractive: boolean;
+  /** Handler for mouse down event */
+  onMouseDown: (e: React.MouseEvent) => void;
 }
 
 /**
  * DeviceContainer - Positioned device frame wrapper
  *
  * Handles device positioning, scale, rotation/3D perspective, and shadow effects.
- * Renders either a flat DeviceFrame or a 3D DeviceFrame3D based on deviceStyle.
+ * Renders either a flat DeviceFrame or a 3D DeviceFrame3D based on the device instance style.
  */
-export const DeviceContainer = ({ screenshot }: DeviceContainerProps) => {
-  const is3D = screenshot.deviceStyle === "3d";
+export const DeviceContainer = ({
+  device,
+  renderX = device.x,
+  zIndex,
+  isSelected,
+  isInteractive,
+  onMouseDown,
+}: DeviceContainerProps) => {
+  const is3D = device.style === "3d";
+  const selectedDevice = getDeviceSpecById(device.deviceId);
+  const selectedColor = getDeviceColorById(selectedDevice.id, device.colorId);
 
   return (
     <div
-      className="absolute left-1/2"
+      data-draggable-element="device"
+      className="absolute cursor-move select-none"
       style={{
-        width: `${screenshot.deviceScale}%`,
-        top: `${screenshot.deviceOffsetY}%`,
+        left: `${renderX}%`,
+        width: `${device.scale}%`,
+        top: `${device.y}%`,
         transform: "translateX(-50%)",
-        zIndex: Z_INDEX.device,
-        filter: getDropShadowFilter(screenshot.deviceShadow),
+        zIndex,
+        filter: getDropShadowFilter(device.shadow),
         perspective: is3D ? "1200px" : undefined,
+        ...getDeviceSelectionStyles(isSelected),
       }}
+      onMouseDown={isInteractive ? onMouseDown : undefined}
+      onClick={(e) => e.stopPropagation()}
     >
       <div
         style={
           is3D
             ? {
-                transform: `rotateY(${screenshot.device3dRotateY}deg) rotateX(${screenshot.device3dRotateX}deg)`,
+                transform: `rotateY(${device.rotateY}deg) rotateX(${device.rotateX}deg)`,
                 transformStyle: "preserve-3d",
                 transformOrigin: "center center",
               }
             : {
-                transform: `rotate(${screenshot.deviceRotation}deg)`,
+                transform: `rotate(${device.rotation}deg)`,
                 transformOrigin: "center center",
               }
         }
       >
         {is3D ? (
-          <DeviceFrame3D screenshot={screenshot} />
+          <DeviceFrame3D
+            device={device}
+            selectedDevice={selectedDevice}
+            selectedColor={selectedColor}
+          />
         ) : (
-          <DeviceFrame screenshot={screenshot} />
+          <DeviceFrame
+            device={device}
+            selectedDevice={selectedDevice}
+            selectedColor={selectedColor}
+          />
         )}
       </div>
+      {isSelected && <SelectionHandles />}
     </div>
   );
 };

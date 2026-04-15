@@ -4,15 +4,9 @@
  * TypeScript interfaces for RightSidebar components.
  */
 
-import type { ShadowConfig, ImageOverlay } from "../../types";
+import type { ShadowConfig, ImageOverlay, SelectedElement } from "../../types";
 
-/**
- * Selected element in the canvas
- */
-export interface SelectedElement {
-  type: "headline" | "subheadline" | "image";
-  id?: string;
-}
+export type { SelectedElement };
 
 /**
  * Props for the SidebarSection component

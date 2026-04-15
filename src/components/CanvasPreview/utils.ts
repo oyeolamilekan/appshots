@@ -4,7 +4,7 @@
  * Helper functions for computing styles and handling element interactions.
  */
 
-import type { ImageOverlay, ShadowConfig } from "../../types";
+import type { ImageOverlay, SelectedElement, ShadowConfig } from "../../types";
 import { SELECTION_COLORS } from "./constants";
 
 /**
@@ -30,13 +30,14 @@ export const getDropShadowFilter = (
  * @returns True if the element is selected
  */
 export const isElementSelected = (
-  isActiveScreenshot: boolean,
-  selectedElement: { type: string; id?: string } | null,
+  selectedElement: SelectedElement | null,
   elementType: string,
+  screenshotId: string,
   elementId?: string,
 ): boolean => {
-  if (!isActiveScreenshot || !selectedElement) return false;
+  if (!selectedElement) return false;
   if (selectedElement.type !== elementType) return false;
+  if (selectedElement.screenshotId !== screenshotId) return false;
   if (elementId && selectedElement.id !== elementId) return false;
   return true;
 };
@@ -68,6 +69,10 @@ export const getImageSelectionStyles = (
   outline: isSelected ? `2px dashed ${SELECTION_COLORS.imageOutline}` : "none",
   outlineOffset: "4px",
 });
+
+export const getDeviceSelectionStyles = (
+  isSelected: boolean,
+): React.CSSProperties => getImageSelectionStyles(isSelected);
 
 /**
  * Generates position and transform styles for overlay images.

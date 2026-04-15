@@ -7,18 +7,18 @@
 
 import { useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
-import type { Screenshot } from "../../types";
+import type { DeviceInstance } from "../../types";
 
 interface PositionPresetsProps {
-  screenshot: Screenshot;
-  onUpdateScreenshot: (updates: Partial<Screenshot>) => void;
+  device: DeviceInstance;
+  onUpdateDevice: (updates: Partial<DeviceInstance>) => void;
 }
 
 interface Preset {
   id: string;
   label: string;
   icon: React.ReactNode;
-  settings: Partial<Screenshot>;
+  settings: Partial<DeviceInstance>;
 }
 
 /**
@@ -68,10 +68,10 @@ const PRESETS: Preset[] = [
     label: "Centered",
     icon: <DeviceIcon offsetY={50} scale={65} />,
     settings: {
-      deviceScale: 65,
-      deviceOffsetY: 35,
-      deviceRotation: 0,
-      deviceStyle: "flat",
+      scale: 65,
+      y: 35,
+      rotation: 0,
+      style: "flat",
     },
   },
   {
@@ -79,10 +79,10 @@ const PRESETS: Preset[] = [
     label: "Bleed Bottom",
     icon: <DeviceIcon offsetY={70} scale={70} />,
     settings: {
-      deviceScale: 70,
-      deviceOffsetY: 45,
-      deviceRotation: 0,
-      deviceStyle: "flat",
+      scale: 70,
+      y: 45,
+      rotation: 0,
+      style: "flat",
     },
   },
   {
@@ -90,10 +90,10 @@ const PRESETS: Preset[] = [
     label: "Bleed Top",
     icon: <DeviceIcon offsetY={30} scale={70} />,
     settings: {
-      deviceScale: 70,
-      deviceOffsetY: 15,
-      deviceRotation: 0,
-      deviceStyle: "flat",
+      scale: 70,
+      y: 15,
+      rotation: 0,
+      style: "flat",
     },
   },
   {
@@ -101,10 +101,10 @@ const PRESETS: Preset[] = [
     label: "Float Center",
     icon: <DeviceIcon offsetY={50} scale={55} />,
     settings: {
-      deviceScale: 55,
-      deviceOffsetY: 30,
-      deviceRotation: 0,
-      deviceStyle: "flat",
+      scale: 55,
+      y: 30,
+      rotation: 0,
+      style: "flat",
     },
   },
   {
@@ -112,10 +112,10 @@ const PRESETS: Preset[] = [
     label: "Tilt Left",
     icon: <DeviceIcon rotation={-15} offsetY={50} scale={60} />,
     settings: {
-      deviceScale: 60,
-      deviceOffsetY: 35,
-      deviceRotation: -15,
-      deviceStyle: "flat",
+      scale: 60,
+      y: 35,
+      rotation: -15,
+      style: "flat",
     },
   },
   {
@@ -123,10 +123,10 @@ const PRESETS: Preset[] = [
     label: "Tilt Right",
     icon: <DeviceIcon rotation={15} offsetY={50} scale={60} />,
     settings: {
-      deviceScale: 60,
-      deviceOffsetY: 35,
-      deviceRotation: 15,
-      deviceStyle: "flat",
+      scale: 60,
+      y: 35,
+      rotation: 15,
+      style: "flat",
     },
   },
   {
@@ -134,12 +134,12 @@ const PRESETS: Preset[] = [
     label: "Perspective",
     icon: <DeviceIcon is3D rotateY={-20} offsetY={50} scale={60} />,
     settings: {
-      deviceScale: 60,
-      deviceOffsetY: 35,
-      deviceRotation: 0,
-      deviceStyle: "3d",
-      device3dRotateY: -20,
-      device3dRotateX: 5,
+      scale: 60,
+      y: 35,
+      rotation: 0,
+      style: "3d",
+      rotateY: -20,
+      rotateX: 5,
     },
   },
   {
@@ -147,10 +147,10 @@ const PRESETS: Preset[] = [
     label: "Float Bottom",
     icon: <DeviceIcon offsetY={65} scale={50} />,
     settings: {
-      deviceScale: 50,
-      deviceOffsetY: 50,
-      deviceRotation: 0,
-      deviceStyle: "flat",
+      scale: 50,
+      y: 50,
+      rotation: 0,
+      style: "flat",
     },
   },
 ];
@@ -159,8 +159,8 @@ const PRESETS: Preset[] = [
  * PositionPresets - Quick device positioning presets
  */
 export const PositionPresets = ({
-  screenshot,
-  onUpdateScreenshot,
+  device,
+  onUpdateDevice,
 }: PositionPresetsProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -169,10 +169,10 @@ export const PositionPresets = ({
     for (const preset of PRESETS) {
       const { settings } = preset;
       const matches =
-        screenshot.deviceScale === settings.deviceScale &&
-        screenshot.deviceOffsetY === settings.deviceOffsetY &&
-        screenshot.deviceRotation === settings.deviceRotation &&
-        screenshot.deviceStyle === settings.deviceStyle;
+        device.scale === settings.scale &&
+        device.y === settings.y &&
+        device.rotation === settings.rotation &&
+        device.style === settings.style;
       if (matches) return preset.id;
     }
     return null;
@@ -181,7 +181,7 @@ export const PositionPresets = ({
   const activePreset = getActivePreset();
 
   const handlePresetClick = (preset: Preset) => {
-    onUpdateScreenshot(preset.settings);
+    onUpdateDevice(preset.settings);
   };
 
   return (

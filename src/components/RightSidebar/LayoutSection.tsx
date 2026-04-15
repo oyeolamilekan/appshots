@@ -4,19 +4,23 @@
  * Device layout and sizing controls including 2D/3D style toggle.
  */
 
-import type { Screenshot, ShadowConfig } from "../../types";
+import type { DeviceInstance, Screenshot, ShadowConfig } from "../../types";
 import { SidebarSection } from "./SidebarSection";
 import { RangeSlider } from "./RangeSlider";
 import { ShadowControls } from "./ShadowControls";
 import { SLIDER_RANGES, STYLES } from "./constants";
 
 interface LayoutSectionProps {
-  /** Active screenshot data */
+  /** Active device data */
+  device: DeviceInstance;
+  /** Active screenshot for text width controls */
   screenshot: Screenshot;
   /** Headline font size */
   headlineFontSize: number;
   /** Subheadline font size */
   subheadlineFontSize: number;
+  /** Update device handler */
+  onUpdateDevice: (updates: Partial<DeviceInstance>) => void;
   /** Update screenshot handler */
   onUpdateScreenshot: (updates: Partial<Screenshot>) => void;
   /** Set headline font size handler */
@@ -33,20 +37,22 @@ interface LayoutSectionProps {
  * text sizes, and shadow settings.
  */
 export const LayoutSection = ({
+  device,
   screenshot,
   headlineFontSize,
   subheadlineFontSize,
+  onUpdateDevice,
   onUpdateScreenshot,
   onHeadlineSizeChange,
   onSubheadlineSizeChange,
 }: LayoutSectionProps) => {
   const handleShadowUpdate = (updates: Partial<ShadowConfig>) => {
-    onUpdateScreenshot({
-      deviceShadow: { ...screenshot.deviceShadow, ...updates },
+    onUpdateDevice({
+      shadow: { ...device.shadow, ...updates },
     });
   };
 
-  const is3D = screenshot.deviceStyle === "3d";
+  const is3D = device.style === "3d";
 
   return (
     <SidebarSection title="Layout">
@@ -59,13 +65,13 @@ export const LayoutSection = ({
           <div className="flex gap-1 p-0.5 bg-[#2a2a2a] rounded-lg">
             <button
               className={`${STYLES.modeButton} ${!is3D ? STYLES.modeButtonActive : STYLES.modeButtonInactive}`}
-              onClick={() => onUpdateScreenshot({ deviceStyle: "flat" })}
+              onClick={() => onUpdateDevice({ style: "flat" })}
             >
               Flat
             </button>
             <button
               className={`${STYLES.modeButton} ${is3D ? STYLES.modeButtonActive : STYLES.modeButtonInactive}`}
-              onClick={() => onUpdateScreenshot({ deviceStyle: "3d" })}
+              onClick={() => onUpdateDevice({ style: "3d" })}
             >
               3D
             </button>
@@ -74,20 +80,20 @@ export const LayoutSection = ({
 
         <RangeSlider
           label="Device Size"
-          value={screenshot.deviceScale}
+          value={device.scale}
           min={SLIDER_RANGES.deviceScale.min}
           max={SLIDER_RANGES.deviceScale.max}
           unit="%"
-          onChange={(v) => onUpdateScreenshot({ deviceScale: v })}
+          onChange={(v) => onUpdateDevice({ scale: v })}
         />
 
         <RangeSlider
           label="Device Position"
-          value={screenshot.deviceOffsetY}
+          value={device.y}
           min={SLIDER_RANGES.devicePosition.min}
           max={SLIDER_RANGES.devicePosition.max}
           unit="%"
-          onChange={(v) => onUpdateScreenshot({ deviceOffsetY: v })}
+          onChange={(v) => onUpdateDevice({ y: v })}
         />
 
         {/* Show rotation for flat mode, 3D controls for 3D mode */}
@@ -95,36 +101,36 @@ export const LayoutSection = ({
           <>
             <RangeSlider
               label="3D Rotate Y"
-              value={screenshot.device3dRotateY}
+              value={device.rotateY}
               min={SLIDER_RANGES.device3dRotateY.min}
               max={SLIDER_RANGES.device3dRotateY.max}
               unit="°"
-              onChange={(v) => onUpdateScreenshot({ device3dRotateY: v })}
+              onChange={(v) => onUpdateDevice({ rotateY: v })}
             />
             <RangeSlider
               label="3D Rotate X"
-              value={screenshot.device3dRotateX}
+              value={device.rotateX}
               min={SLIDER_RANGES.device3dRotateX.min}
               max={SLIDER_RANGES.device3dRotateX.max}
               unit="°"
-              onChange={(v) => onUpdateScreenshot({ device3dRotateX: v })}
+              onChange={(v) => onUpdateDevice({ rotateX: v })}
             />
           </>
         ) : (
           <RangeSlider
             label="Device Rotation"
-            value={screenshot.deviceRotation}
+            value={device.rotation}
             min={SLIDER_RANGES.deviceRotation.min}
             max={SLIDER_RANGES.deviceRotation.max}
             unit="°"
-            onChange={(v) => onUpdateScreenshot({ deviceRotation: v })}
+            onChange={(v) => onUpdateDevice({ rotation: v })}
           />
         )}
 
         <ShadowControls
-          shadow={screenshot.deviceShadow}
+          shadow={device.shadow}
           onToggle={() =>
-            handleShadowUpdate({ enabled: !screenshot.deviceShadow.enabled })
+            handleShadowUpdate({ enabled: !device.shadow.enabled })
           }
           onColorChange={(color) => handleShadowUpdate({ color })}
           onBlurChange={(blur) => handleShadowUpdate({ blur })}

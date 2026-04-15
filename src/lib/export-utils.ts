@@ -1,12 +1,18 @@
-import type { Screenshot, DeviceSpec, DeviceColor, ExportSize } from "../types";
+import type {
+  Screenshot,
+  DeviceSpec,
+  DeviceColor,
+  ExportSize,
+  DeviceInstance,
+} from "../types";
 import { gradientPresets } from "../constants";
 import { drawRichText } from "./rich-text-canvas";
+import { getDeviceColorById, getDeviceSpecById } from "./device-instances";
+import { getRenderableDevicesForScreenshot } from "./device-overflow";
 import JSZip from "jszip";
 
 interface ExportOptions {
   screenshots: Screenshot[];
-  selectedDevice: DeviceSpec;
-  selectedColor: DeviceColor;
   exportSize: ExportSize;
   previewDimensions: { width: number; height: number };
   headlineFontSize: number;
@@ -249,7 +255,7 @@ const renderDeviceToOffscreen = async (
   bezelThickness: number,
   selectedDevice: DeviceSpec,
   selectedColor: DeviceColor,
-  screenshot: Screenshot,
+  screenshotSrc: string | null,
   scaleX: number,
   isSamsung: boolean,
 ): Promise<HTMLCanvasElement> => {
@@ -323,7 +329,7 @@ const renderDeviceToOffscreen = async (
   ctx.fill();
 
   // --- Screenshot image ---
-  if (screenshot.screenshotSrc) {
+  if (screenshotSrc) {
     const img = new Image();
     img.crossOrigin = "anonymous";
     await new Promise<void>((resolve) => {
@@ -337,7 +343,7 @@ const renderDeviceToOffscreen = async (
         resolve();
       };
       img.onerror = () => resolve();
-      img.src = screenshot.screenshotSrc!;
+      img.src = screenshotSrc;
     });
   }
 
@@ -393,10 +399,502 @@ const renderDeviceToOffscreen = async (
   return offscreen;
 };
 
+const parseFrameRadius = (radius: string): [number, number] => {
+  const [xPct, yPct] = radius.split("/").map((s) => parseFloat(s) / 100);
+  return [xPct, yPct];
+};
+
+const drawDeviceInstance = async (
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  device: DeviceInstance,
+  scaleX: number,
+  renderX: number = device.x,
+) => {
+  const selectedDevice = getDeviceSpecById(device.deviceId);
+  const selectedColor = getDeviceColorById(selectedDevice.id, device.colorId);
+
+  const deviceWidthPx = canvas.width * (device.scale / 100);
+  const deviceHeightPx =
+    deviceWidthPx * (selectedDevice.height / selectedDevice.width);
+  const deviceX = canvas.width * (renderX / 100) - deviceWidthPx / 2;
+  const deviceY = canvas.height * (device.y / 100);
+
+  const [outerRadiusXPct, outerRadiusYPct] = parseFrameRadius(
+    selectedDevice.frameRadius.outer,
+  );
+  const cornerRadiusX = deviceWidthPx * outerRadiusXPct;
+  const cornerRadiusY = deviceHeightPx * outerRadiusYPct;
+  const frameRadius = Math.min(cornerRadiusX, cornerRadiusY);
+  const bezelThickness = deviceWidthPx * 0.012;
+  const isSamsungDevice = selectedDevice.id.startsWith("samsung-");
+
+  if (device.style === "3d") {
+    const rotYDeg = device.rotateY ?? -15;
+    const rotXDeg = device.rotateX ?? 5;
+    const ryRad = (rotYDeg * Math.PI) / 180;
+    const rxRad = (rotXDeg * Math.PI) / 180;
+    const perspective = 1200 * scaleX;
+    const edgeDepth = EXPORT_EDGE_DEPTH * scaleX;
+
+    const halfW = deviceWidthPx / 2;
+    const halfH = deviceHeightPx / 2;
+    const deviceCenterX = deviceX + halfW;
+    const deviceCenterY = deviceY + halfH;
+
+    const offscreen = await renderDeviceToOffscreen(
+      deviceWidthPx,
+      deviceHeightPx,
+      frameRadius,
+      bezelThickness,
+      selectedDevice,
+      selectedColor,
+      device.screenshotSrc,
+      scaleX,
+      isSamsungDevice,
+    );
+
+    const SLICE_COUNT = 40;
+    const halfEdge = edgeDepth / 2;
+
+    if (device.shadow?.enabled) {
+      ctx.save();
+      ctx.shadowColor = device.shadow.color;
+      ctx.shadowBlur = device.shadow.blur * scaleX;
+      ctx.shadowOffsetX = device.shadow.offsetX * scaleX;
+      ctx.shadowOffsetY = device.shadow.offsetY * scaleX;
+      ctx.fillStyle = "rgba(0,0,0,0.01)";
+      traceProjectedRoundedRect(
+        ctx,
+        halfW,
+        halfH,
+        frameRadius,
+        halfEdge,
+        ryRad,
+        rxRad,
+        perspective,
+        deviceCenterX,
+        deviceCenterY,
+      );
+      ctx.fill();
+      ctx.restore();
+    }
+
+    for (let i = 0; i < SLICE_COUNT; i++) {
+      const t = i / (SLICE_COUNT - 1);
+      const z = lerp3d(-halfEdge, halfEdge, t);
+
+      if (i === SLICE_COUNT - 1) {
+        ctx.save();
+        traceProjectedRoundedRect(
+          ctx,
+          halfW,
+          halfH,
+          frameRadius,
+          z,
+          ryRad,
+          rxRad,
+          perspective,
+          deviceCenterX,
+          deviceCenterY,
+        );
+        ctx.clip();
+        const corners = getProjectedCorners(
+          halfW,
+          halfH,
+          z,
+          ryRad,
+          rxRad,
+          perspective,
+          deviceCenterX,
+          deviceCenterY,
+        );
+        drawPerspectiveImage(ctx, offscreen, corners, 40, 60);
+        ctx.restore();
+      } else {
+        ctx.save();
+
+        if (selectedColor.frameColors) {
+          const gradient = ctx.createLinearGradient(
+            deviceCenterX - halfW,
+            deviceCenterY - halfH,
+            deviceCenterX + halfW,
+            deviceCenterY + halfH,
+          );
+          selectedColor.frameColors.forEach((color, index) => {
+            gradient.addColorStop(
+              index / (selectedColor.frameColors!.length - 1),
+              color,
+            );
+          });
+          ctx.fillStyle = gradient;
+        } else {
+          ctx.fillStyle = selectedColor.frame;
+        }
+        traceProjectedRoundedRect(
+          ctx,
+          halfW,
+          halfH,
+          frameRadius,
+          z,
+          ryRad,
+          rxRad,
+          perspective,
+          deviceCenterX,
+          deviceCenterY,
+        );
+        ctx.fill();
+
+        const darkness = (1 - t) * 0.28;
+        ctx.fillStyle = `rgba(0, 0, 0, ${darkness})`;
+        traceProjectedRoundedRect(
+          ctx,
+          halfW,
+          halfH,
+          frameRadius,
+          z,
+          ryRad,
+          rxRad,
+          perspective,
+          deviceCenterX,
+          deviceCenterY,
+        );
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    const btnWidthPx = deviceWidthPx * 0.006;
+
+    const draw3DButton = (
+      side: "left" | "right",
+      topPct: number,
+      heightPct: number,
+    ) => {
+      const isRight = side === "right";
+      const btnH = deviceHeightPx * heightPct;
+      const btnTopY = -halfH + deviceHeightPx * topPct;
+      const btnBotY = btnTopY + btnH;
+      const btnZFront = halfEdge + 2;
+      const btnXInner = isRight ? halfW - 1 : -halfW + 1;
+      const btnXOuter = isRight ? halfW + btnWidthPx : -halfW - btnWidthPx;
+
+      const p0 = project3DPoint(
+        btnXInner,
+        btnTopY,
+        btnZFront,
+        ryRad,
+        rxRad,
+        perspective,
+        deviceCenterX,
+        deviceCenterY,
+      );
+      const p1 = project3DPoint(
+        btnXOuter,
+        btnTopY,
+        btnZFront,
+        ryRad,
+        rxRad,
+        perspective,
+        deviceCenterX,
+        deviceCenterY,
+      );
+      const p2 = project3DPoint(
+        btnXOuter,
+        btnBotY,
+        btnZFront,
+        ryRad,
+        rxRad,
+        perspective,
+        deviceCenterX,
+        deviceCenterY,
+      );
+      const p3 = project3DPoint(
+        btnXInner,
+        btnBotY,
+        btnZFront,
+        ryRad,
+        rxRad,
+        perspective,
+        deviceCenterX,
+        deviceCenterY,
+      );
+
+      ctx.save();
+      if (selectedColor.frameColors) {
+        const gradient = ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
+        gradient.addColorStop(0, selectedColor.frameColors[1]);
+        gradient.addColorStop(1, selectedColor.frameColors[2]);
+        ctx.fillStyle = gradient;
+      } else {
+        ctx.fillStyle = selectedColor.frame;
+      }
+      ctx.beginPath();
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(0,0,0,0.12)";
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    if (isSamsungDevice) {
+      draw3DButton("right", 0.22, 0.05);
+      draw3DButton("right", 0.29, 0.06);
+      draw3DButton("right", 0.36, 0.06);
+    } else {
+      draw3DButton("right", 0.18, 0.08);
+      draw3DButton("left", 0.15, 0.04);
+      draw3DButton("left", 0.21, 0.06);
+      draw3DButton("left", 0.28, 0.06);
+    }
+
+    return;
+  }
+
+  ctx.save();
+  const deviceCenterX = deviceX + deviceWidthPx / 2;
+  const deviceCenterY = deviceY + deviceHeightPx / 2;
+  ctx.translate(deviceCenterX, deviceCenterY);
+  ctx.rotate((device.rotation * Math.PI) / 180);
+  ctx.translate(-deviceCenterX, -deviceCenterY);
+
+  const btnWidth = deviceWidthPx * 0.008;
+  const btnRadius = 2 * scaleX;
+
+  const drawButton = (
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    isRight: boolean,
+  ) => {
+    ctx.save();
+    if (selectedColor.frameColors) {
+      const btnGradient = ctx.createLinearGradient(x, y, x + w, y);
+      const c1 = selectedColor.frameColors[2];
+      const c2 = selectedColor.frameColors[0];
+      if (isRight) {
+        btnGradient.addColorStop(0, c1);
+        btnGradient.addColorStop(1, c2);
+      } else {
+        btnGradient.addColorStop(0, c2);
+        btnGradient.addColorStop(1, c1);
+      }
+      ctx.fillStyle = btnGradient;
+    } else {
+      ctx.fillStyle = selectedColor.frame;
+    }
+    ctx.shadowColor = "rgba(0,0,0,0.2)";
+    ctx.shadowBlur = 4 * scaleX;
+    ctx.shadowOffsetX = isRight ? 2 * scaleX : -2 * scaleX;
+    ctx.shadowOffsetY = 0;
+    ctx.beginPath();
+    if (isRight) {
+      ctx.roundRect(x, y, w, h, [0, btnRadius, btnRadius, 0]);
+    } else {
+      ctx.roundRect(x, y, w, h, [btnRadius, 0, 0, btnRadius]);
+    }
+    ctx.fill();
+    ctx.restore();
+  };
+
+  if (isSamsungDevice) {
+    drawButton(
+      deviceX + deviceWidthPx,
+      deviceY + deviceHeightPx * 0.22,
+      btnWidth,
+      deviceHeightPx * 0.05,
+      true,
+    );
+    drawButton(
+      deviceX + deviceWidthPx,
+      deviceY + deviceHeightPx * 0.29,
+      btnWidth,
+      deviceHeightPx * 0.06,
+      true,
+    );
+    drawButton(
+      deviceX + deviceWidthPx,
+      deviceY + deviceHeightPx * 0.36,
+      btnWidth,
+      deviceHeightPx * 0.06,
+      true,
+    );
+  } else {
+    drawButton(
+      deviceX + deviceWidthPx,
+      deviceY + deviceHeightPx * 0.18,
+      btnWidth,
+      deviceHeightPx * 0.08,
+      true,
+    );
+    drawButton(
+      deviceX - btnWidth,
+      deviceY + deviceHeightPx * 0.15,
+      btnWidth,
+      deviceHeightPx * 0.04,
+      false,
+    );
+    drawButton(
+      deviceX - btnWidth,
+      deviceY + deviceHeightPx * 0.21,
+      btnWidth,
+      deviceHeightPx * 0.06,
+      false,
+    );
+    drawButton(
+      deviceX - btnWidth,
+      deviceY + deviceHeightPx * 0.28,
+      btnWidth,
+      deviceHeightPx * 0.06,
+      false,
+    );
+  }
+
+  ctx.save();
+  if (device.shadow?.enabled) {
+    ctx.shadowColor = device.shadow.color;
+    ctx.shadowBlur = device.shadow.blur * scaleX;
+    ctx.shadowOffsetX = device.shadow.offsetX * scaleX;
+    ctx.shadowOffsetY = device.shadow.offsetY * scaleX;
+  }
+  if (selectedColor.frameColors) {
+    const gradient = ctx.createLinearGradient(
+      deviceX,
+      deviceY,
+      deviceX + deviceWidthPx,
+      deviceY + deviceHeightPx,
+    );
+    selectedColor.frameColors.forEach((color, index) => {
+      gradient.addColorStop(
+        index / (selectedColor.frameColors!.length - 1),
+        color,
+      );
+    });
+    ctx.fillStyle = gradient;
+  } else {
+    ctx.fillStyle = selectedColor.frame;
+  }
+  ctx.beginPath();
+  ctx.roundRect(deviceX, deviceY, deviceWidthPx, deviceHeightPx, frameRadius);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(0,0,0,0.1)";
+  ctx.lineWidth = 1 * scaleX;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.roundRect(
+    deviceX + 1 * scaleX,
+    deviceY + 1 * scaleX,
+    deviceWidthPx - 2 * scaleX,
+    deviceHeightPx - 2 * scaleX,
+    frameRadius,
+  );
+  ctx.strokeStyle = "rgba(255,255,255,0.3)";
+  ctx.lineWidth = 2 * scaleX;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.roundRect(
+    deviceX + 3 * scaleX,
+    deviceY + 3 * scaleX,
+    deviceWidthPx - 6 * scaleX,
+    deviceHeightPx - 6 * scaleX,
+    frameRadius,
+  );
+  ctx.strokeStyle = "rgba(0,0,0,0.2)";
+  ctx.lineWidth = 2 * scaleX;
+  ctx.stroke();
+  ctx.restore();
+
+  const screenX = deviceX + bezelThickness;
+  const screenY = deviceY + bezelThickness;
+  const screenWidthPx = deviceWidthPx - bezelThickness * 2;
+  const screenHeightPx = deviceHeightPx - bezelThickness * 2;
+  const screenRadius = frameRadius - bezelThickness;
+
+  ctx.fillStyle = "#1c1c1e";
+  ctx.beginPath();
+  ctx.roundRect(screenX, screenY, screenWidthPx, screenHeightPx, screenRadius);
+  ctx.fill();
+
+  const screenshotSrc = device.screenshotSrc;
+  if (screenshotSrc) {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    await new Promise<void>((resolve) => {
+      img.onload = () => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(screenX, screenY, screenWidthPx, screenHeightPx, screenRadius);
+        ctx.clip();
+        ctx.drawImage(img, screenX, screenY, screenWidthPx, screenHeightPx);
+        ctx.restore();
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = screenshotSrc;
+    });
+  }
+
+  if (selectedDevice.hasIsland) {
+    const islandWidth = screenWidthPx * 0.28;
+    const islandHeight = screenHeightPx * 0.032;
+    const islandX = screenX + (screenWidthPx - islandWidth) / 2;
+    const islandY = screenY + screenHeightPx * 0.018;
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.roundRect(islandX, islandY, islandWidth, islandHeight, islandHeight / 2);
+    ctx.fill();
+  } else if (selectedDevice.notchWidth > 0) {
+    const notchWidth = screenWidthPx * 0.35;
+    const notchHeight = screenHeightPx * 0.035;
+    const notchX = screenX + (screenWidthPx - notchWidth) / 2;
+    const notchY = screenY;
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.roundRect(notchX, notchY, notchWidth, notchHeight, [
+      0,
+      0,
+      20 * scaleX,
+      20 * scaleX,
+    ]);
+    ctx.fill();
+  } else if (isSamsungDevice) {
+    const isTablet = selectedDevice.id.includes("tab");
+    const camSize = screenWidthPx * (isTablet ? 0.018 : 0.025);
+    const camX = isTablet
+      ? screenX + screenWidthPx * 0.35
+      : screenX + (screenWidthPx - camSize) / 2;
+    const camY = screenY + screenHeightPx * (isTablet ? 0.015 : 0.02);
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.arc(
+      camX + camSize / 2,
+      camY + camSize / 2,
+      camSize / 2,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+  }
+
+  ctx.restore();
+};
+
 export const exportScreenshots = async ({
   screenshots,
-  selectedDevice,
-  selectedColor,
   exportSize,
   previewDimensions,
   headlineFontSize,
@@ -410,17 +908,6 @@ export const exportScreenshots = async ({
   for (let i = 0; i < screenshots.length; i++) {
     const screenshot = screenshots[i];
     const filename = `appstore-screenshot-${i + 1}.png`;
-    
-    // Get per-screenshot device settings
-    const {
-      deviceScale,
-      deviceOffsetY,
-      deviceRotation,
-      deviceShadow,
-      deviceStyle,
-      device3dRotateY,
-      device3dRotateX,
-    } = screenshot;
 
     const canvas = document.createElement("canvas");
     canvas.width = exportSize.width;
@@ -447,54 +934,6 @@ export const exportScreenshots = async ({
       ctx.fillStyle = screenshot.backgroundColor;
     }
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Get font family
-    const fontFamily = `'${screenshot.fontFamily}', sans-serif`;
-
-    // Font sizes scaled for export
-    const exportHeadlineFontSize = (headlineFontSize / 3) * scaleX;
-    const exportSubheadlineFontSize = (subheadlineFontSize / 3) * scaleX;
-    const lineHeight = 1.1;
-
-    // Text max widths based on percentage (same as preview CSS width)
-    // Subtract padding to ensure text wrapping matches preview exactly
-    const headlineMaxWidth =
-      canvas.width * (screenshot.headlineWidth / 100) - paddingX;
-    const subheadlineMaxWidth =
-      canvas.width * (screenshot.subheadlineWidth / 100) - paddingX;
-
-    // Position text using same percentage positions, scaled to export canvas
-    const headlineX = canvas.width * (screenshot.headlineX / 100);
-    const headlineTextY = canvas.height * (screenshot.headlineY / 100);
-
-    // Draw headline with rich text support
-    drawRichText(ctx, screenshot.headline, {
-      x: headlineX,
-      y: headlineTextY,
-      maxWidth: headlineMaxWidth,
-      fontSize: exportHeadlineFontSize,
-      fontFamily,
-      defaultColor: screenshot.textColor,
-      lineHeight,
-      textAlign: "center",
-      fontWeight: 700,
-    });
-
-    // Draw subheadline with rich text support
-    const subheadlineX = canvas.width * (screenshot.subheadlineX / 100);
-    const subheadlineTextY = canvas.height * (screenshot.subheadlineY / 100);
-
-    drawRichText(ctx, screenshot.subheadline, {
-      x: subheadlineX,
-      y: subheadlineTextY,
-      maxWidth: subheadlineMaxWidth,
-      fontSize: exportSubheadlineFontSize,
-      fontFamily,
-      defaultColor: screenshot.textColor,
-      lineHeight,
-      textAlign: "center",
-      fontWeight: 600,
-    });
 
     // Helper to draw overlay images
     const drawOverlayImages = async (layer: "behind" | "front") => {
@@ -554,344 +993,48 @@ export const exportScreenshots = async ({
     // Draw overlay images behind device
     await drawOverlayImages("behind");
 
-    // Draw device - use same percentage-based positioning as preview
-    const deviceWidthPx = canvas.width * (deviceScale / 100);
-    const deviceHeightPx =
-      deviceWidthPx * (selectedDevice.height / selectedDevice.width);
-    const deviceX = (canvas.width - deviceWidthPx) / 2;
-    const deviceY = canvas.height * (deviceOffsetY / 100);
-
-    // Parse frameRadius from device config (format: "14%/6.5%" -> [14, 6.5])
-    const parseFrameRadius = (radius: string): [number, number] => {
-      const [xPct, yPct] = radius.split("/").map((s) => parseFloat(s) / 100);
-      return [xPct, yPct];
-    };
-    const [outerRadiusXPct, outerRadiusYPct] = parseFrameRadius(
-      selectedDevice.frameRadius.outer,
-    );
-    const cornerRadiusX = deviceWidthPx * outerRadiusXPct;
-    const cornerRadiusY = deviceHeightPx * outerRadiusYPct;
-    const frameRadius = Math.min(cornerRadiusX, cornerRadiusY);
-    const bezelThickness = deviceWidthPx * 0.012;
-    const isSamsungDevice = selectedDevice.id.startsWith("samsung-");
-
-    if (deviceStyle === "3d") {
-      // --- 3D Device Export (projected rounded-rect paths) ---
-      const rotYDeg = device3dRotateY ?? -15;
-      const rotXDeg = device3dRotateX ?? 5;
-      const ryRad = (rotYDeg * Math.PI) / 180;
-      const rxRad = (rotXDeg * Math.PI) / 180;
-      const perspective = 1200 * scaleX;
-      const edgeDepth = EXPORT_EDGE_DEPTH * scaleX;
-
-      const halfW = deviceWidthPx / 2;
-      const halfH = deviceHeightPx / 2;
-      const deviceCenterX = canvas.width / 2;
-      const deviceCenterY = deviceY + halfH;
-
-      // 1. Render full device (with screenshot) to offscreen canvas
-      const offscreen = await renderDeviceToOffscreen(
-        deviceWidthPx,
-        deviceHeightPx,
-        frameRadius,
-        bezelThickness,
-        selectedDevice,
-        selectedColor,
-        screenshot,
-        scaleX,
-        isSamsungDevice,
-      );
-
-      const SLICE_COUNT = 40;
-      const halfEdge = edgeDepth / 2;
-
-      // 2. Draw device shadow using projected rounded rect
-      if (deviceShadow?.enabled) {
-        ctx.save();
-        ctx.shadowColor = deviceShadow.color;
-        ctx.shadowBlur = deviceShadow.blur * scaleX;
-        ctx.shadowOffsetX = deviceShadow.offsetX * scaleX;
-        ctx.shadowOffsetY = deviceShadow.offsetY * scaleX;
-        ctx.fillStyle = "rgba(0,0,0,0.01)";
-        traceProjectedRoundedRect(
-          ctx, halfW, halfH, frameRadius, halfEdge,
-          ryRad, rxRad, perspective, deviceCenterX, deviceCenterY,
-        );
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // 3. Draw slices from back to front
-      for (let i = 0; i < SLICE_COUNT; i++) {
-        const t = i / (SLICE_COUNT - 1);
-        const z = lerp3d(-halfEdge, halfEdge, t);
-
-        if (i === SLICE_COUNT - 1) {
-          // Front face: clip to projected rounded rect, then draw image
-          ctx.save();
-          traceProjectedRoundedRect(
-            ctx, halfW, halfH, frameRadius, z,
-            ryRad, rxRad, perspective, deviceCenterX, deviceCenterY,
-          );
-          ctx.clip();
-          const corners = getProjectedCorners(
-            halfW, halfH, z, ryRad, rxRad, perspective, deviceCenterX, deviceCenterY,
-          );
-          drawPerspectiveImage(ctx, offscreen, corners, 40, 60);
-          ctx.restore();
-        } else {
-          // Edge slice: draw as projected rounded-rect path
-          ctx.save();
-
-          // Fill with frame color
-          if (selectedColor.frameColors) {
-            const gradient = ctx.createLinearGradient(
-              deviceCenterX - halfW, deviceCenterY - halfH,
-              deviceCenterX + halfW, deviceCenterY + halfH,
-            );
-            selectedColor.frameColors.forEach((color, index) => {
-              gradient.addColorStop(
-                index / (selectedColor.frameColors!.length - 1),
-                color,
-              );
-            });
-            ctx.fillStyle = gradient;
-          } else {
-            ctx.fillStyle = selectedColor.frame;
-          }
-          traceProjectedRoundedRect(
-            ctx, halfW, halfH, frameRadius, z,
-            ryRad, rxRad, perspective, deviceCenterX, deviceCenterY,
-          );
-          ctx.fill();
-
-          // Subtle darkening based on depth (matches CSS brightness 0.65→1.0)
-          const darkness = (1 - t) * 0.28;
-          ctx.fillStyle = `rgba(0, 0, 0, ${darkness})`;
-          traceProjectedRoundedRect(
-            ctx, halfW, halfH, frameRadius, z,
-            ryRad, rxRad, perspective, deviceCenterX, deviceCenterY,
-          );
-          ctx.fill();
-
-          ctx.restore();
-        }
-      }
-
-      // 4. Draw 3D buttons — small raised bumps on the device edge
-      const btnWidthPx = deviceWidthPx * 0.006;
-
-      const draw3DButton = (
-        side: "left" | "right",
-        topPct: number,
-        heightPct: number,
-      ) => {
-        const isRight = side === "right";
-        const btnH = deviceHeightPx * heightPct;
-        const btnTopY = -halfH + deviceHeightPx * topPct;
-        const btnBotY = btnTopY + btnH;
-
-        // Button sits flush on the edge, protruding slightly outward
-        const btnZFront = halfEdge + 2;
-        const btnXInner = isRight ? halfW - 1 : -halfW + 1;
-        const btnXOuter = isRight ? halfW + btnWidthPx : -halfW - btnWidthPx;
-
-        // Single projected quad for the button face
-        const p0 = project3DPoint(btnXInner, btnTopY, btnZFront, ryRad, rxRad, perspective, deviceCenterX, deviceCenterY);
-        const p1 = project3DPoint(btnXOuter, btnTopY, btnZFront, ryRad, rxRad, perspective, deviceCenterX, deviceCenterY);
-        const p2 = project3DPoint(btnXOuter, btnBotY, btnZFront, ryRad, rxRad, perspective, deviceCenterX, deviceCenterY);
-        const p3 = project3DPoint(btnXInner, btnBotY, btnZFront, ryRad, rxRad, perspective, deviceCenterX, deviceCenterY);
-
-        ctx.save();
-        if (selectedColor.frameColors) {
-          const gradient = ctx.createLinearGradient(p0.x, p0.y, p1.x, p1.y);
-          gradient.addColorStop(0, selectedColor.frameColors[1]);
-          gradient.addColorStop(1, selectedColor.frameColors[2]);
-          ctx.fillStyle = gradient;
-        } else {
-          ctx.fillStyle = selectedColor.frame;
-        }
-        ctx.beginPath();
-        ctx.moveTo(p0.x, p0.y);
-        ctx.lineTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.lineTo(p3.x, p3.y);
-        ctx.closePath();
-        ctx.fill();
-
-        // Subtle highlight
-        ctx.fillStyle = "rgba(255,255,255,0.08)";
-        ctx.fill();
-
-        // Thin outline
-        ctx.strokeStyle = "rgba(0,0,0,0.12)";
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
-        ctx.restore();
-      };
-
-      if (isSamsungDevice) {
-        draw3DButton("right", 0.22, 0.05);
-        draw3DButton("right", 0.29, 0.06);
-        draw3DButton("right", 0.36, 0.06);
-      } else {
-        draw3DButton("right", 0.18, 0.08);
-        draw3DButton("left", 0.15, 0.04);
-        draw3DButton("left", 0.21, 0.06);
-        draw3DButton("left", 0.28, 0.06);
-      }
-    } else {
-      // --- Flat Device Export (existing behavior) ---
-      ctx.save();
-      const deviceCenterX = deviceX + deviceWidthPx / 2;
-      const deviceCenterY = deviceY + deviceHeightPx / 2;
-      ctx.translate(deviceCenterX, deviceCenterY);
-      ctx.rotate((deviceRotation * Math.PI) / 180);
-      ctx.translate(-deviceCenterX, -deviceCenterY);
-
-      // Draw device buttons
-      const btnWidth = deviceWidthPx * 0.008;
-      const btnRadius = 2 * scaleX;
-
-      const drawButton = (
-        x: number,
-        y: number,
-        w: number,
-        h: number,
-        isRight: boolean,
-      ) => {
-        ctx.save();
-        if (selectedColor.frameColors) {
-          const btnGradient = ctx.createLinearGradient(x, y, x + w, y);
-          const c1 = selectedColor.frameColors[2];
-          const c2 = selectedColor.frameColors[0];
-          if (isRight) {
-            btnGradient.addColorStop(0, c1);
-            btnGradient.addColorStop(1, c2);
-          } else {
-            btnGradient.addColorStop(0, c2);
-            btnGradient.addColorStop(1, c1);
-          }
-          ctx.fillStyle = btnGradient;
-        } else {
-          ctx.fillStyle = selectedColor.frame;
-        }
-        ctx.shadowColor = "rgba(0,0,0,0.2)";
-        ctx.shadowBlur = 4 * scaleX;
-        ctx.shadowOffsetX = isRight ? 2 * scaleX : -2 * scaleX;
-        ctx.shadowOffsetY = 0;
-        ctx.beginPath();
-        if (isRight) {
-          ctx.roundRect(x, y, w, h, [0, btnRadius, btnRadius, 0]);
-        } else {
-          ctx.roundRect(x, y, w, h, [btnRadius, 0, 0, btnRadius]);
-        }
-        ctx.fill();
-        ctx.restore();
-      };
-
-      if (isSamsungDevice) {
-        drawButton(deviceX + deviceWidthPx, deviceY + deviceHeightPx * 0.22, btnWidth, deviceHeightPx * 0.05, true);
-        drawButton(deviceX + deviceWidthPx, deviceY + deviceHeightPx * 0.29, btnWidth, deviceHeightPx * 0.06, true);
-        drawButton(deviceX + deviceWidthPx, deviceY + deviceHeightPx * 0.36, btnWidth, deviceHeightPx * 0.06, true);
-      } else {
-        drawButton(deviceX + deviceWidthPx, deviceY + deviceHeightPx * 0.18, btnWidth, deviceHeightPx * 0.08, true);
-        drawButton(deviceX - btnWidth, deviceY + deviceHeightPx * 0.15, btnWidth, deviceHeightPx * 0.04, false);
-        drawButton(deviceX - btnWidth, deviceY + deviceHeightPx * 0.21, btnWidth, deviceHeightPx * 0.06, false);
-        drawButton(deviceX - btnWidth, deviceY + deviceHeightPx * 0.28, btnWidth, deviceHeightPx * 0.06, false);
-      }
-
-      // Draw device frame with shadow
-      ctx.save();
-      if (deviceShadow?.enabled) {
-        ctx.shadowColor = deviceShadow.color;
-        ctx.shadowBlur = deviceShadow.blur * scaleX;
-        ctx.shadowOffsetX = deviceShadow.offsetX * scaleX;
-        ctx.shadowOffsetY = deviceShadow.offsetY * scaleX;
-      }
-      if (selectedColor.frameColors) {
-        const gradient = ctx.createLinearGradient(deviceX, deviceY, deviceX + deviceWidthPx, deviceY + deviceHeightPx);
-        selectedColor.frameColors.forEach((color, index) => {
-          gradient.addColorStop(index / (selectedColor.frameColors!.length - 1), color);
-        });
-        ctx.fillStyle = gradient;
-      } else {
-        ctx.fillStyle = selectedColor.frame;
-      }
-      ctx.beginPath();
-      ctx.roundRect(deviceX, deviceY, deviceWidthPx, deviceHeightPx, frameRadius);
-      ctx.fill();
-
-      ctx.strokeStyle = "rgba(0,0,0,0.1)";
-      ctx.lineWidth = 1 * scaleX;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.roundRect(deviceX + 1 * scaleX, deviceY + 1 * scaleX, deviceWidthPx - 2 * scaleX, deviceHeightPx - 2 * scaleX, frameRadius);
-      ctx.strokeStyle = "rgba(255,255,255,0.3)";
-      ctx.lineWidth = 2 * scaleX;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.roundRect(deviceX + 3 * scaleX, deviceY + 3 * scaleX, deviceWidthPx - 6 * scaleX, deviceHeightPx - 6 * scaleX, frameRadius);
-      ctx.strokeStyle = "rgba(0,0,0,0.2)";
-      ctx.lineWidth = 2 * scaleX;
-      ctx.stroke();
-      ctx.restore();
-
-      // Screen area
-      const screenX = deviceX + bezelThickness;
-      const screenY = deviceY + bezelThickness;
-      const screenWidthPx = deviceWidthPx - bezelThickness * 2;
-      const screenHeightPx = deviceHeightPx - bezelThickness * 2;
-      const screenRadius = frameRadius - bezelThickness;
-
-      ctx.fillStyle = "#1c1c1e";
-      ctx.beginPath();
-      ctx.roundRect(screenX, screenY, screenWidthPx, screenHeightPx, screenRadius);
-      ctx.fill();
-
-      if (screenshot.screenshotSrc) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        await new Promise<void>((resolve) => {
-          img.onload = () => {
-            ctx.save();
-            ctx.beginPath();
-            ctx.roundRect(screenX, screenY, screenWidthPx, screenHeightPx, screenRadius);
-            ctx.clip();
-            ctx.drawImage(img, screenX, screenY, screenWidthPx, screenHeightPx);
-            ctx.restore();
-            resolve();
-          };
-          img.onerror = () => resolve();
-          img.src = screenshot.screenshotSrc!;
-        });
-      }
-
-      if (selectedDevice.hasIsland) {
-        const islandWidth = screenWidthPx * 0.28;
-        const islandHeight = screenHeightPx * 0.032;
-        const islandX = screenX + (screenWidthPx - islandWidth) / 2;
-        const islandY = screenY + screenHeightPx * 0.018;
-        ctx.fillStyle = "#000";
-        ctx.beginPath();
-        ctx.roundRect(islandX, islandY, islandWidth, islandHeight, islandHeight / 2);
-        ctx.fill();
-      } else if (selectedDevice.notchWidth > 0) {
-        const notchWidth = screenWidthPx * 0.35;
-        const notchHeight = screenHeightPx * 0.035;
-        const notchX = screenX + (screenWidthPx - notchWidth) / 2;
-        const notchY = screenY;
-        ctx.fillStyle = "#000";
-        ctx.beginPath();
-        ctx.roundRect(notchX, notchY, notchWidth, notchHeight, [0, 0, 20 * scaleX, 20 * scaleX]);
-        ctx.fill();
-      }
-
-      // Restore rotation transform
-      ctx.restore();
+    const renderableDevices = getRenderableDevicesForScreenshot(screenshots, i);
+    for (const { device, localX } of renderableDevices) {
+      await drawDeviceInstance(ctx, canvas, device, scaleX, localX);
     }
+
+    const fontFamily = `'${screenshot.fontFamily}', sans-serif`;
+    const exportHeadlineFontSize = (headlineFontSize / 3) * scaleX;
+    const exportSubheadlineFontSize = (subheadlineFontSize / 3) * scaleX;
+    const lineHeight = 1.1;
+    const headlineMaxWidth =
+      canvas.width * (screenshot.headlineWidth / 100) - paddingX;
+    const subheadlineMaxWidth =
+      canvas.width * (screenshot.subheadlineWidth / 100) - paddingX;
+    const headlineX = canvas.width * (screenshot.headlineX / 100);
+    const headlineTextY = canvas.height * (screenshot.headlineY / 100);
+
+    drawRichText(ctx, screenshot.headline, {
+      x: headlineX,
+      y: headlineTextY,
+      maxWidth: headlineMaxWidth,
+      fontSize: exportHeadlineFontSize,
+      fontFamily,
+      defaultColor: screenshot.textColor,
+      lineHeight,
+      textAlign: "center",
+      fontWeight: 700,
+    });
+
+    const subheadlineX = canvas.width * (screenshot.subheadlineX / 100);
+    const subheadlineTextY = canvas.height * (screenshot.subheadlineY / 100);
+
+    drawRichText(ctx, screenshot.subheadline, {
+      x: subheadlineX,
+      y: subheadlineTextY,
+      maxWidth: subheadlineMaxWidth,
+      fontSize: exportSubheadlineFontSize,
+      fontFamily,
+      defaultColor: screenshot.textColor,
+      lineHeight,
+      textAlign: "center",
+      fontWeight: 600,
+    });
 
     // Draw overlay images in front of device
     await drawOverlayImages("front");

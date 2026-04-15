@@ -13,6 +13,7 @@
 
 import { useEditor } from "../../context/EditorContext";
 import { gradientPresets } from "../../constants";
+import { DeviceInstancesSection } from "./DeviceInstancesSection";
 import { ScreenshotImageSection } from "./ScreenshotImageSection";
 import { PositionPresets } from "./PositionPresets";
 import { LayoutSection } from "./LayoutSection";
@@ -32,6 +33,7 @@ import { STYLES } from "./constants";
 export const RightSidebar = () => {
   const {
     activeScreenshot,
+    activeDevice,
     updateActiveScreenshot,
     headlineFontSize,
     setHeadlineFontSize,
@@ -49,6 +51,11 @@ export const RightSidebar = () => {
     updateOverlayImageLayer,
     updateOverlayImageRotation,
     updateOverlayImageShadow,
+    addDevice,
+    selectDevice,
+    removeDevice,
+    bringDeviceForward,
+    sendDeviceBackward,
     bringImageForward,
     sendImageBackward,
   } = useEditor();
@@ -56,21 +63,44 @@ export const RightSidebar = () => {
   return (
     <aside className={STYLES.sidebar}>
       <div className={STYLES.content}>
-        <ScreenshotImageSection
+        <DeviceInstancesSection
           screenshot={activeScreenshot}
+          onAddDevice={addDevice}
+          onSelectDevice={selectDevice}
+          onRemoveDevice={removeDevice}
+          onBringForward={bringDeviceForward}
+          onSendBackward={sendDeviceBackward}
+        />
+
+        <ScreenshotImageSection
+          device={activeDevice}
           fileInputRef={fileInputRef}
           onFileUpload={handleFileUpload}
         />
 
         <PositionPresets
-          screenshot={activeScreenshot}
-          onUpdateScreenshot={updateActiveScreenshot}
+          device={activeDevice}
+          onUpdateDevice={(updates) =>
+            updateActiveScreenshot({
+              devices: activeScreenshot.devices.map((device) =>
+                device.id === activeDevice.id ? { ...device, ...updates } : device,
+              ),
+            })
+          }
         />
 
         <LayoutSection
+          device={activeDevice}
           screenshot={activeScreenshot}
           headlineFontSize={headlineFontSize}
           subheadlineFontSize={subheadlineFontSize}
+          onUpdateDevice={(updates) =>
+            updateActiveScreenshot({
+              devices: activeScreenshot.devices.map((device) =>
+                device.id === activeDevice.id ? { ...device, ...updates } : device,
+              ),
+            })
+          }
           onUpdateScreenshot={updateActiveScreenshot}
           onHeadlineSizeChange={setHeadlineFontSize}
           onSubheadlineSizeChange={setSubheadlineFontSize}

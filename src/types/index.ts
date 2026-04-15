@@ -55,11 +55,27 @@ export type ImageOverlay = {
   shadow: ShadowConfig;
 };
 
+export type DeviceStyle = "flat" | "3d";
+
+export type DeviceInstance = {
+  id: string;
+  deviceId: string;
+  colorId: string;
+  screenshotSrc: string | null;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  shadow: ShadowConfig;
+  style: DeviceStyle;
+  rotateY: number;
+  rotateX: number;
+};
+
 export type Screenshot = {
   id: string;
   headline: string;
   subheadline: string;
-  screenshotSrc: string | null;
   backgroundColor: string;
   backgroundMode: "solid" | "gradient" | "image";
   gradientPresetId: string | null;
@@ -72,16 +88,14 @@ export type Screenshot = {
   subheadlineWidth: number;
   fontFamily: string;
   overlayImages: ImageOverlay[];
-  deviceScale: number;
-  deviceOffsetY: number;
-  deviceRotation: number;
-  deviceShadow: ShadowConfig;
-  /** Device rendering style: flat (2D) or 3D */
-  deviceStyle: "flat" | "3d";
-  /** 3D rotation on Y axis (horizontal rotation) */
-  device3dRotateY: number;
-  /** 3D rotation on X axis (vertical tilt) */
-  device3dRotateX: number;
+  devices: DeviceInstance[];
+  activeDeviceId: string;
+};
+
+export type SelectedElement = {
+  type: "headline" | "subheadline" | "image" | "device";
+  screenshotId: string;
+  id?: string;
 };
 
 export type ExportSize = {

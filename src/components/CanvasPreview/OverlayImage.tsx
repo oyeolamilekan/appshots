@@ -55,6 +55,7 @@ export const OverlayImage = ({
     className="absolute cursor-move select-none"
     style={getOverlayImageStyles(image, zIndex, isSelected)}
     onMouseDown={isInteractive ? onMouseDown : undefined}
+    onClick={(e) => e.stopPropagation()}
   >
     <img
       src={image.src}

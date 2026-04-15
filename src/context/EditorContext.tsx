@@ -10,14 +10,23 @@ import React, {
 import type {
   DeviceSpec,
   DeviceColor,
+  DeviceInstance,
   ExportSize,
   Screenshot,
   ImageOverlay,
   ShadowConfig,
   Project,
+  SelectedElement,
 } from "../types";
 import { devices, exportSizes, gradientPresets } from "../constants";
 import { exportScreenshots } from "../lib/export-utils";
+import {
+  cloneDeviceInstance,
+  createDeviceInstance,
+  ensureDeviceInstances,
+  getDeviceColorById,
+  getDeviceSpecById,
+} from "../lib/device-instances";
 import {
   loadPersistedState,
   useEditorPersistence,
@@ -51,13 +60,8 @@ interface EditorContextType {
   setScreenshots: (screenshots: Screenshot[]) => void;
   activeScreenshotId: string;
   setActiveScreenshotId: (id: string) => void;
-  selectedElement: {
-    type: "headline" | "subheadline" | "image";
-    id?: string;
-  } | null;
-  setSelectedElement: (
-    element: { type: "headline" | "subheadline" | "image"; id?: string } | null,
-  ) => void;
+  selectedElement: SelectedElement | null;
+  setSelectedElement: (element: SelectedElement | null) => void;
   isDragging: boolean;
   headlineFontSize: number;
   setHeadlineFontSize: (size: number) => void;
@@ -76,6 +80,7 @@ interface EditorContextType {
   selectedDevice: DeviceSpec;
   selectedColor: DeviceColor;
   activeScreenshot: Screenshot;
+  activeDevice: DeviceInstance;
   exportSize: ExportSize;
 
   // Actions
@@ -84,7 +89,8 @@ interface EditorContextType {
   removeScreenshot: (id: string) => void;
   handleElementMouseDown: (
     e: React.MouseEvent,
-    type: "headline" | "subheadline" | "image",
+    type: "headline" | "subheadline" | "image" | "device",
+    screenshotId: string,
     id?: string,
   ) => void;
   handleElementMouseMove: (e: MouseEvent) => void;
@@ -98,6 +104,11 @@ interface EditorContextType {
     imageId: string,
     shadow: Partial<ShadowConfig>,
   ) => void;
+  addDevice: () => void;
+  selectDevice: (deviceId: string) => void;
+  removeDevice: (deviceId: string) => void;
+  bringDeviceForward: (deviceId: string) => void;
+  sendDeviceBackward: (deviceId: string) => void;
   bringImageForward: (imageId: string) => void;
   sendImageBackward: (imageId: string) => void;
   bringImageToFront: (imageId: string) => void;
@@ -110,51 +121,113 @@ interface EditorContextType {
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
+type LegacyScreenshotFields = {
+  screenshotSrc?: string | null;
+  deviceScale?: number;
+  deviceOffsetY?: number;
+  deviceRotation?: number;
+  deviceShadow?: ShadowConfig;
+  deviceStyle?: "flat" | "3d";
+  device3dRotateY?: number;
+  device3dRotateX?: number;
+};
+
 // Default screenshot for new editors
-const createDefaultScreenshot = (): Screenshot => ({
-  id: generateId(),
-  headline: "Showcase Your App",
-  subheadline:
-    "Create stunning App Store screenshots in minutes. Customizable templates, devices, and backgrounds.",
-  screenshotSrc: null,
-  backgroundColor: "#8b5cf6",
-  backgroundMode: "solid",
-  gradientPresetId: null,
-  textColor: "#ffffff",
-  headlineX: 50,
-  headlineY: 10,
-  headlineWidth: 80,
-  subheadlineX: 50,
-  subheadlineY: 18,
-  subheadlineWidth: 80,
-  fontFamily: "Inter",
-  overlayImages: [],
-  deviceScale: 85,
-  deviceOffsetY: 30,
-  deviceRotation: 0,
-  deviceShadow: {
-    enabled: true,
-    color: "#000000",
-    blur: 50,
-    offsetX: 0,
-    offsetY: 25,
-  },
-  deviceStyle: "flat",
-  device3dRotateY: -15,
-  device3dRotateX: 5,
-});
+const createDefaultScreenshot = (
+  defaultDeviceId: string = devices[0].id,
+  defaultColorId: string = devices[0].colors[0].id,
+): Screenshot => {
+  const defaultDevice = createDeviceInstance({
+    deviceId: defaultDeviceId,
+    colorId: defaultColorId,
+  });
+
+  return {
+    id: generateId(),
+    headline: "Showcase Your App",
+    subheadline:
+      "Create stunning App Store screenshots in minutes. Customizable templates, devices, and backgrounds.",
+    backgroundColor: "#8b5cf6",
+    backgroundMode: "solid",
+    gradientPresetId: null,
+    textColor: "#ffffff",
+    headlineX: 50,
+    headlineY: 10,
+    headlineWidth: 80,
+    subheadlineX: 50,
+    subheadlineY: 18,
+    subheadlineWidth: 80,
+    fontFamily: "Inter",
+    overlayImages: [],
+    devices: [defaultDevice],
+    activeDeviceId: defaultDevice.id,
+  };
+};
+
+const normalizeScreenshot = (
+  screenshot: Partial<Screenshot> & LegacyScreenshotFields,
+  fallbackDeviceId: string,
+  fallbackColorId: string,
+): Screenshot => {
+  const {
+    screenshotSrc: _legacyScreenshotSrc,
+    deviceScale: _legacyDeviceScale,
+    deviceOffsetY: _legacyDeviceOffsetY,
+    deviceRotation: _legacyDeviceRotation,
+    deviceShadow: _legacyDeviceShadow,
+    deviceStyle: _legacyDeviceStyle,
+    device3dRotateY: _legacyDevice3dRotateY,
+    device3dRotateX: _legacyDevice3dRotateX,
+    ...rest
+  } = screenshot;
+  const baseScreenshot = createDefaultScreenshot(fallbackDeviceId, fallbackColorId);
+  const { devices: deviceInstances, activeDeviceId } = ensureDeviceInstances(
+    screenshot,
+    fallbackDeviceId,
+    fallbackColorId,
+  );
+
+  return {
+    ...baseScreenshot,
+    ...rest,
+    overlayImages: screenshot.overlayImages ?? [],
+    devices: deviceInstances,
+    activeDeviceId,
+  };
+};
+
+const normalizeProject = (project: Project): Project => {
+  const fallbackDeviceId = project.selectedDeviceId ?? devices[0].id;
+  const fallbackColorId =
+    project.selectedColorId ?? getDeviceSpecById(fallbackDeviceId).colors[0].id;
+  const normalizedScreenshots = project.screenshots.map((screenshot) =>
+    normalizeScreenshot(screenshot, fallbackDeviceId, fallbackColorId),
+  );
+
+  return {
+    ...project,
+    selectedDeviceId: fallbackDeviceId,
+    selectedColorId: fallbackColorId,
+    screenshots: normalizedScreenshots,
+    activeScreenshotId:
+      normalizedScreenshots.find((s) => s.id === project.activeScreenshotId)?.id ??
+      normalizedScreenshots[0].id,
+  };
+};
 
 // Create a default project
 const createDefaultProject = (name: string = "My Project"): Project => {
-  const defaultScreenshot = createDefaultScreenshot();
+  const defaultDeviceId = devices[0].id;
+  const defaultColorId = devices[0].colors[0].id;
+  const defaultScreenshot = createDefaultScreenshot(defaultDeviceId, defaultColorId);
   return {
     id: generateId(),
     name,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     screenshots: [defaultScreenshot],
-    selectedDeviceId: devices[0].id,
-    selectedColorId: devices[0].colors[0].id,
+    selectedDeviceId: defaultDeviceId,
+    selectedColorId: defaultColorId,
     exportSizeId: exportSizes[0].id,
     activeScreenshotId: defaultScreenshot.id,
     headlineFontSize: 72,
@@ -168,7 +241,7 @@ const persistedState = loadPersistedState();
 // Initialize projects from persisted state or create default
 const getInitialProjects = (): Project[] => {
   if (persistedState?.projects && persistedState.projects.length > 0) {
-    return persistedState.projects;
+    return persistedState.projects.map(normalizeProject);
   }
   return [createDefaultProject()];
 };
@@ -217,10 +290,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     activeProject.subheadlineFontSize,
   );
 
-  const [selectedElement, setSelectedElement] = useState<{
-    type: "headline" | "subheadline" | "image";
-    id?: string;
-  } | null>(null);
+  const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(
+    null,
+  );
 
   const [isDragging, setIsDragging] = useState(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
@@ -284,9 +356,39 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   // Wrapper functions that update both local state and project
   const setSelectedDeviceId = (id: string) => {
     setSelectedDeviceIdState(id);
+    const nextColorId = getDeviceColorById(id, selectedColorId).id;
+    setSelectedColorIdState(nextColorId);
+    setScreenshotsState((prev) =>
+      prev.map((screenshot) =>
+        screenshot.id === activeScreenshotId
+          ? {
+              ...screenshot,
+              devices: screenshot.devices.map((device) =>
+                device.id === screenshot.activeDeviceId
+                  ? { ...device, deviceId: id, colorId: nextColorId }
+                  : device,
+              ),
+            }
+          : screenshot,
+      ),
+    );
   };
   const setSelectedColorId = (id: string) => {
     setSelectedColorIdState(id);
+    setScreenshotsState((prev) =>
+      prev.map((screenshot) =>
+        screenshot.id === activeScreenshotId
+          ? {
+              ...screenshot,
+              devices: screenshot.devices.map((device) =>
+                device.id === screenshot.activeDeviceId
+                  ? { ...device, colorId: id }
+                  : device,
+              ),
+            }
+          : screenshot,
+      ),
+    );
   };
   const setExportSizeId = (id: string) => {
     setExportSizeIdState(id);
@@ -350,32 +452,58 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const selectedDevice =
-    devices.find((d) => d.id === selectedDeviceId) || devices[0];
+    getDeviceSpecById(selectedDeviceId);
   const selectedColor =
-    selectedDevice.colors.find((c) => c.id === selectedColorId) ||
-    selectedDevice.colors[0];
+    getDeviceColorById(selectedDevice.id, selectedColorId);
   const activeScreenshot =
     screenshots.find((s) => s.id === activeScreenshotId) || screenshots[0];
+  const activeDevice =
+    activeScreenshot.devices.find(
+      (device) => device.id === activeScreenshot.activeDeviceId,
+    ) || activeScreenshot.devices[0];
   const exportSize =
     exportSizes.find((s) => s.id === exportSizeId) || exportSizes[0];
 
-  const updateActiveScreenshot = useCallback(
-    (updates: Partial<Screenshot>) => {
+  const updateScreenshotById = useCallback(
+    (screenshotId: string, updates: Partial<Screenshot>) => {
       setScreenshotsState((prev) =>
-        prev.map((s) =>
-          s.id === activeScreenshotId ? { ...s, ...updates } : s,
-        ),
+        prev.map((s) => (s.id === screenshotId ? { ...s, ...updates } : s)),
       );
     },
-    [activeScreenshotId],
+    [],
   );
+
+  const updateActiveScreenshot = useCallback(
+    (updates: Partial<Screenshot>) => {
+      updateScreenshotById(activeScreenshotId, updates);
+    },
+    [activeScreenshotId, updateScreenshotById],
+  );
+
+  useEffect(() => {
+    if (!activeDevice) return;
+    if (selectedDeviceId !== activeDevice.deviceId) {
+      setSelectedDeviceIdState(activeDevice.deviceId);
+    }
+    if (selectedColorId !== activeDevice.colorId) {
+      setSelectedColorIdState(activeDevice.colorId);
+    }
+    if (activeScreenshot.activeDeviceId !== activeDevice.id) {
+      updateActiveScreenshot({ activeDeviceId: activeDevice.id });
+    }
+  }, [
+    activeDevice,
+    activeScreenshot.activeDeviceId,
+    selectedColorId,
+    selectedDeviceId,
+    updateActiveScreenshot,
+  ]);
 
   const addScreenshot = () => {
     const newScreenshot: Screenshot = {
       id: generateId(),
       headline: "New Screenshot",
       subheadline: "Add your description here",
-      screenshotSrc: null,
       backgroundColor: activeScreenshot.backgroundColor,
       backgroundMode: activeScreenshot.backgroundMode,
       gradientPresetId: activeScreenshot.gradientPresetId,
@@ -388,47 +516,65 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       subheadlineWidth: 80,
       fontFamily: activeScreenshot.fontFamily,
       overlayImages: [],
-      deviceScale: activeScreenshot.deviceScale,
-      deviceOffsetY: activeScreenshot.deviceOffsetY,
-      deviceRotation: activeScreenshot.deviceRotation,
-      deviceShadow: { ...activeScreenshot.deviceShadow },
-      deviceStyle: activeScreenshot.deviceStyle,
-      device3dRotateY: activeScreenshot.device3dRotateY,
-      device3dRotateX: activeScreenshot.device3dRotateX,
+      devices: activeScreenshot.devices.map((device) =>
+        cloneDeviceInstance(device, { id: generateId() }),
+      ),
+      activeDeviceId: activeScreenshot.devices[0]?.id ?? generateId(),
     };
+    newScreenshot.activeDeviceId = newScreenshot.devices[0].id;
     setScreenshots([...screenshots, newScreenshot]);
     setActiveScreenshotId(newScreenshot.id);
   };
 
   const handleElementMouseDown = (
     e: React.MouseEvent,
-    type: "headline" | "subheadline" | "image",
+    type: "headline" | "subheadline" | "image" | "device",
+    screenshotId: string,
     id?: string,
   ) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (previewRef.current) {
+    const screenshotElement = (e.currentTarget as HTMLElement).closest(
+      "[data-screenshot-card='true']",
+    );
+    if (screenshotElement instanceof HTMLElement) {
+      const rect = screenshotElement.getBoundingClientRect();
+      dragContainerSize.current = { width: rect.width, height: rect.height };
+    } else if (previewRef.current) {
       const rect = previewRef.current.getBoundingClientRect();
       dragContainerSize.current = { width: rect.width, height: rect.height };
     }
 
+    const targetScreenshot =
+      screenshots.find((screenshot) => screenshot.id === screenshotId) ??
+      activeScreenshot;
+
     setIsDragging(true);
-    setSelectedElement({ type, id });
+    setSelectedElement({ type, id, screenshotId });
+    if (activeScreenshotId !== screenshotId) {
+      setActiveScreenshotIdState(screenshotId);
+    }
     dragStartPos.current = { x: e.clientX, y: e.clientY };
 
-    if (type === "headline") {
+    if (type === "device" && id) {
+      updateScreenshotById(screenshotId, { activeDeviceId: id });
+      const device = targetScreenshot.devices.find((item) => item.id === id);
+      if (device) {
+        dragStartElementPos.current = { x: device.x, y: device.y };
+      }
+    } else if (type === "headline") {
       dragStartElementPos.current = {
-        x: activeScreenshot.headlineX,
-        y: activeScreenshot.headlineY,
+        x: targetScreenshot.headlineX,
+        y: targetScreenshot.headlineY,
       };
     } else if (type === "subheadline") {
       dragStartElementPos.current = {
-        x: activeScreenshot.subheadlineX,
-        y: activeScreenshot.subheadlineY,
+        x: targetScreenshot.subheadlineX,
+        y: targetScreenshot.subheadlineY,
       };
     } else if (type === "image" && id) {
-      const image = activeScreenshot.overlayImages.find((img) => img.id === id);
+      const image = targetScreenshot.overlayImages.find((img) => img.id === id);
       if (image) {
         dragStartElementPos.current = { x: image.x, y: image.y };
       }
@@ -441,25 +587,44 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     const { x: newX, y: newY } = pendingUpdate.current;
 
     if (selectedElement.type === "headline") {
-      updateActiveScreenshot({
+      updateScreenshotById(selectedElement.screenshotId, {
         headlineX: newX,
         headlineY: newY,
       });
     } else if (selectedElement.type === "subheadline") {
-      updateActiveScreenshot({
+      updateScreenshotById(selectedElement.screenshotId, {
         subheadlineX: newX,
         subheadlineY: newY,
       });
     } else if (selectedElement.type === "image" && selectedElement.id) {
-      const updatedImages = activeScreenshot.overlayImages.map((img) =>
+      const targetScreenshot = screenshots.find(
+        (screenshot) => screenshot.id === selectedElement.screenshotId,
+      );
+      if (!targetScreenshot) return;
+
+      const updatedImages = targetScreenshot.overlayImages.map((img) =>
         img.id === selectedElement.id ? { ...img, x: newX, y: newY } : img,
       );
-      updateActiveScreenshot({ overlayImages: updatedImages });
+      updateScreenshotById(selectedElement.screenshotId, {
+        overlayImages: updatedImages,
+      });
+    } else if (selectedElement.type === "device" && selectedElement.id) {
+      const targetScreenshot = screenshots.find(
+        (screenshot) => screenshot.id === selectedElement.screenshotId,
+      );
+      if (!targetScreenshot) return;
+
+      const updatedDevices = targetScreenshot.devices.map((device) =>
+        device.id === selectedElement.id ? { ...device, x: newX, y: newY } : device,
+      );
+      updateScreenshotById(selectedElement.screenshotId, {
+        devices: updatedDevices,
+      });
     }
 
     pendingUpdate.current = null;
     rafId.current = null;
-  }, [selectedElement, activeScreenshot, updateActiveScreenshot]);
+  }, [screenshots, selectedElement, updateScreenshotById]);
 
   const handleElementMouseMove = useCallback(
     (e: MouseEvent) => {
@@ -534,7 +699,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
           updateActiveScreenshot({
             overlayImages: [...activeScreenshot.overlayImages, newImage],
           });
-          setSelectedElement({ type: "image", id: newImage.id });
+          setSelectedElement({
+            type: "image",
+            id: newImage.id,
+            screenshotId: activeScreenshot.id,
+          });
         };
         img.src = result;
       }
@@ -547,7 +716,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       (img) => img.id !== imageId,
     );
     updateActiveScreenshot({ overlayImages: updatedImages });
-    if (selectedElement?.id === imageId) {
+    if (
+      selectedElement?.type === "image" &&
+      selectedElement.screenshotId === activeScreenshot.id &&
+      selectedElement.id === imageId
+    ) {
       setSelectedElement(null);
     }
   };
@@ -644,6 +817,91 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const addDevice = () => {
+    const nextDevice = activeDevice
+      ? cloneDeviceInstance(activeDevice, {
+          id: generateId(),
+          x: Math.min(activeDevice.x + 12, 88),
+          y: Math.min(activeDevice.y + 4, 70),
+        })
+      : createDeviceInstance({
+          deviceId: selectedDeviceId,
+          colorId: selectedColorId,
+        });
+
+    updateActiveScreenshot({
+      devices: [...activeScreenshot.devices, nextDevice],
+      activeDeviceId: nextDevice.id,
+    });
+    setSelectedElement({
+      type: "device",
+      id: nextDevice.id,
+      screenshotId: activeScreenshot.id,
+    });
+    setSelectedDeviceIdState(nextDevice.deviceId);
+    setSelectedColorIdState(nextDevice.colorId);
+  };
+
+  const selectDevice = (deviceId: string) => {
+    updateActiveScreenshot({ activeDeviceId: deviceId });
+    setSelectedElement({
+      type: "device",
+      id: deviceId,
+      screenshotId: activeScreenshot.id,
+    });
+  };
+
+  const removeDevice = (deviceId: string) => {
+    if (activeScreenshot.devices.length <= 1) return;
+
+    const nextDevices = activeScreenshot.devices.filter(
+      (device) => device.id !== deviceId,
+    );
+    const nextActiveDeviceId =
+      activeScreenshot.activeDeviceId === deviceId
+        ? nextDevices[Math.max(0, nextDevices.length - 1)].id
+        : activeScreenshot.activeDeviceId;
+
+    updateActiveScreenshot({
+      devices: nextDevices,
+      activeDeviceId: nextActiveDeviceId,
+    });
+
+    if (
+      selectedElement?.type === "device" &&
+      selectedElement.screenshotId === activeScreenshot.id &&
+      selectedElement.id === deviceId
+    ) {
+      setSelectedElement({
+        type: "device",
+        id: nextActiveDeviceId,
+        screenshotId: activeScreenshot.id,
+      });
+    }
+  };
+
+  const bringDeviceForward = (deviceId: string) => {
+    const nextDevices = [...activeScreenshot.devices];
+    const index = nextDevices.findIndex((device) => device.id === deviceId);
+    if (index !== -1 && index < nextDevices.length - 1) {
+      const temp = nextDevices[index];
+      nextDevices[index] = nextDevices[index + 1];
+      nextDevices[index + 1] = temp;
+      updateActiveScreenshot({ devices: nextDevices });
+    }
+  };
+
+  const sendDeviceBackward = (deviceId: string) => {
+    const nextDevices = [...activeScreenshot.devices];
+    const index = nextDevices.findIndex((device) => device.id === deviceId);
+    if (index > 0) {
+      const temp = nextDevices[index];
+      nextDevices[index] = nextDevices[index - 1];
+      nextDevices[index - 1] = temp;
+      updateActiveScreenshot({ devices: nextDevices });
+    }
+  };
+
   const removeScreenshot = (id: string) => {
     if (screenshots.length <= 1) return;
     const newScreenshots = screenshots.filter((s) => s.id !== id);
@@ -660,10 +918,17 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     reader.onload = () => {
       const result = reader.result;
       if (typeof result === "string") {
-        updateActiveScreenshot({ screenshotSrc: result });
+        updateActiveScreenshot({
+          devices: activeScreenshot.devices.map((device) =>
+            device.id === activeDevice.id
+              ? { ...device, screenshotSrc: result }
+              : device,
+          ),
+        });
       }
     };
     reader.readAsDataURL(file);
+    event.target.value = "";
   };
 
   const getBackgroundStyle = (screenshot: Screenshot) => {
@@ -679,8 +944,6 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const handleExport = () => {
     exportScreenshots({
       screenshots,
-      selectedDevice,
-      selectedColor,
       exportSize,
       previewDimensions,
       headlineFontSize,
@@ -746,6 +1009,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         selectedDevice,
         selectedColor,
         activeScreenshot,
+        activeDevice,
         exportSize,
         updateActiveScreenshot,
         addScreenshot,
@@ -759,6 +1023,11 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         updateOverlayImageLayer,
         updateOverlayImageRotation,
         updateOverlayImageShadow,
+        addDevice,
+        selectDevice,
+        removeDevice,
+        bringDeviceForward,
+        sendDeviceBackward,
         bringImageForward,
         sendImageBackward,
         bringImageToFront,

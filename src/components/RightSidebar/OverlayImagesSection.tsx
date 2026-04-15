@@ -61,7 +61,9 @@ export const OverlayImagesSection = ({
   onSendBackward,
 }: OverlayImagesSectionProps) => {
   const selectedImage =
-    selectedElement?.type === "image" && selectedElement.id
+    selectedElement?.type === "image" &&
+    selectedElement.screenshotId === screenshot.id &&
+    selectedElement.id
       ? screenshot.overlayImages.find((img) => img.id === selectedElement.id)
       : null;
 
@@ -98,9 +100,16 @@ export const OverlayImagesSection = ({
                 totalCount={screenshot.overlayImages.length}
                 isSelected={
                   selectedElement?.type === "image" &&
+                  selectedElement?.screenshotId === screenshot.id &&
                   selectedElement?.id === img.id
                 }
-                onSelect={() => onSelectElement({ type: "image", id: img.id })}
+                onSelect={() =>
+                  onSelectElement({
+                    type: "image",
+                    id: img.id,
+                    screenshotId: screenshot.id,
+                  })
+                }
                 onRemove={() => onRemoveImage(img.id)}
                 onMoveForward={() => onBringForward(img.id)}
                 onMoveBackward={() => onSendBackward(img.id)}

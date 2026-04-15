@@ -97,6 +97,7 @@ export const TextElement = ({
         ...getTextSelectionStyles(isSelected),
       }}
       onMouseDown={isInteractive ? onMouseDown : undefined}
+      onClick={(e) => e.stopPropagation()}
       dangerouslySetInnerHTML={{ __html: normalizedContent }}
     />
   );

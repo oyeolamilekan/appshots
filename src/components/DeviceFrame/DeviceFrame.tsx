@@ -13,8 +13,7 @@
  */
 
 import { useMemo } from "react";
-import { useEditor } from "../../context/EditorContext";
-import type { Screenshot } from "../../types";
+import type { DeviceColor, DeviceInstance, DeviceSpec } from "../../types";
 import { SHADOWS } from "./constants";
 import { getFrameBackground } from "./utils";
 import { ScreenContent } from "./ScreenContent";
@@ -22,8 +21,12 @@ import { CameraElement } from "./CameraElements";
 import { IPhoneButtons, SamsungButtons } from "./DeviceButtons";
 
 interface DeviceFrameProps {
-  /** Screenshot data containing the image and metadata */
-  screenshot: Screenshot;
+  /** Device instance data containing the image and metadata */
+  device: DeviceInstance;
+  /** Selected device specification */
+  selectedDevice: DeviceSpec;
+  /** Selected device frame color */
+  selectedColor: DeviceColor;
 }
 
 /**
@@ -33,14 +36,16 @@ interface DeviceFrameProps {
  * into a cohesive, realistic device representation.
  *
  * @param props - Component props
- * @param props.screenshot - The screenshot data to display
+ * @param props.device - The device instance data to display
  *
  * @example
- * <DeviceFrame screenshot={currentScreenshot} />
+ * <DeviceFrame device={currentDevice} selectedDevice={deviceSpec} selectedColor={deviceColor} />
  */
-export const DeviceFrame = ({ screenshot }: DeviceFrameProps) => {
-  const { selectedDevice, selectedColor } = useEditor();
-
+export const DeviceFrame = ({
+  device,
+  selectedDevice,
+  selectedColor,
+}: DeviceFrameProps) => {
   // Device type detection
   const isSamsungDevice = selectedDevice.id.startsWith("samsung-");
   const isSamsungTablet = selectedDevice.id.includes("tab");
@@ -73,7 +78,7 @@ export const DeviceFrame = ({ screenshot }: DeviceFrameProps) => {
         className="relative w-full h-full overflow-hidden"
         style={screenStyle}
       >
-        <ScreenContent screenshotSrc={screenshot.screenshotSrc} />
+        <ScreenContent screenshotSrc={device.screenshotSrc} />
         <CameraElement
           device={selectedDevice}
           isSamsung={isSamsungDevice}

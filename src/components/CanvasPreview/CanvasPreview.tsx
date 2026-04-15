@@ -12,6 +12,7 @@
  */
 
 import { useEditor } from "../../context/EditorContext";
+import { getRenderableDevicesForScreenshot } from "../../lib/device-overflow";
 import { Toolbar } from "./Toolbar";
 import { ScreenshotCard } from "./ScreenshotCard";
 import { useResizeObserver } from "./useResizeObserver";
@@ -64,31 +65,39 @@ export const CanvasPreview = () => {
         ref={canvasContainerRef}
         className="flex-1 overflow-x-auto overflow-y-hidden bg-[#0a0a0a] p-6"
       >
-        <div className="flex gap-4 h-full min-w-max">
-          {screenshots.map((screenshot) => (
-            <ScreenshotCard
-              key={screenshot.id}
-              screenshot={screenshot}
-              isActive={activeScreenshotId === screenshot.id}
-              canRemove={screenshots.length > 1}
-              selectedElement={selectedElement}
-              exportSize={exportSize}
-              headlineFontSize={headlineFontSize}
-              subheadlineFontSize={subheadlineFontSize}
-              previewRef={previewRef}
-              getBackgroundStyle={getBackgroundStyle}
-              onSelect={() => {
-                if (activeScreenshotId !== screenshot.id) {
-                  setActiveScreenshotId(screenshot.id);
-                  setSelectedElement(null);
-                }
-              }}
-              onRemove={() => removeScreenshot(screenshot.id)}
-              onDeselect={() => setSelectedElement(null)}
-              onElementMouseDown={handleElementMouseDown}
-              onElementMouseUp={handleElementMouseUp}
-            />
-          ))}
+        <div className="flex gap-1 h-full min-w-max">
+          {screenshots.map((screenshot, index) => {
+            const renderableDevices = getRenderableDevicesForScreenshot(
+              screenshots,
+              index,
+            );
+
+            return (
+              <ScreenshotCard
+                key={screenshot.id}
+                screenshot={screenshot}
+                renderableDevices={renderableDevices}
+                isActive={activeScreenshotId === screenshot.id}
+                canRemove={screenshots.length > 1}
+                selectedElement={selectedElement}
+                exportSize={exportSize}
+                headlineFontSize={headlineFontSize}
+                subheadlineFontSize={subheadlineFontSize}
+                previewRef={previewRef}
+                getBackgroundStyle={getBackgroundStyle}
+                onSelect={() => {
+                  if (activeScreenshotId !== screenshot.id) {
+                    setActiveScreenshotId(screenshot.id);
+                    setSelectedElement(null);
+                  }
+                }}
+                onRemove={() => removeScreenshot(screenshot.id)}
+                onDeselect={() => setSelectedElement(null)}
+                onElementMouseDown={handleElementMouseDown}
+                onElementMouseUp={handleElementMouseUp}
+              />
+            );
+          })}
         </div>
       </div>
     </div>
