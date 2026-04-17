@@ -17,6 +17,9 @@ A free, open-source tool to create stunning, high-converting screenshots for the
 
 - **6 realistic device mockups** — iPhone 15 Pro Max, iPhone 15 Pro, iPhone 14, iPad Pro 12.9", Samsung Galaxy S24 Ultra, Samsung Galaxy Tab S9
 - **Multiple color options per device** — Black Titanium, Natural, Blue, White, and more
+- **Multi-device compositions** — add, select, reorder, and style multiple independent devices inside a single screenshot
+- **Independent device instances** — each device keeps its own screen image, model, color, transform, 3D angles, and shadow
+- **Cross-screen device overflow** — drag devices past the left or right edge to continue them into adjacent screenshots
 - **Flat & 3D rendering modes** — toggle between a classic 2D frame and a perspective 3D view with visible device edges
 - **3D rotation controls** — adjust Rotate Y and Rotate X angles for the perfect perspective
 - **Accurate camera elements** — Dynamic Island, notch, and punch-hole camera matching each device
@@ -29,7 +32,8 @@ A free, open-source tool to create stunning, high-converting screenshots for the
 
 ### 📝 Rich Text & Fonts
 
-- **Rich text editor** for headlines and subheadlines — bold, italic, underline, text color, alignment (left/center/right)
+- **Rich text editor** for headlines and subheadlines — bold, italic, underline, text color, alignment (left/center/right), and text background highlights
+- **Rounded highlight styling** — highlighted text uses padded, rounded backgrounds that match in the editor, preview, and export
 - **Google Fonts integration** — search and preview hundreds of fonts
 - **Independent sizing** — separate font size sliders for headline and subheadline
 - **Width control** — set how wide each text block spans
@@ -45,7 +49,7 @@ A free, open-source tool to create stunning, high-converting screenshots for the
 
 ### 📸 Screenshot Image
 
-- **Upload your app screenshot** — drop in your actual app screenshot to display inside the device frame
+- **Upload your app screenshots** — each device frame can display its own screen image
 
 ### 📐 Layout & Positioning
 
@@ -66,14 +70,18 @@ A free, open-source tool to create stunning, high-converting screenshots for the
 - **Batch export** — export all screenshots at once (ZIP for multiple, PNG for single)
 - **4 export size presets** — 6.7" iPhone, 6.5" iPhone, 5.5" iPhone, 12.9" iPad Pro
 - **Full 3D support** — 3D perspective, edges, and shadows are preserved in exports
+- **Cross-screen layouts preserved** — multi-device overflow compositions export exactly like the on-canvas preview
 - **Pixel-perfect** — exported images match the on-screen preview
+- **Post-export GitHub prompt** — after export, show a quick modal with a direct link to star the project on GitHub
 
 ### 🖥️ Editor Experience
 
 - **Multi-screenshot gallery** — add, remove, and navigate screenshots in a horizontal carousel
 - **Real-time preview** — all changes update instantly on the canvas
 - **Drag-and-drop** — reposition any element by dragging directly on the canvas
-- **Element selection** — click to select text or overlay images with visual feedback
+- **Device manager** — add, select, remove, and reorder devices from the right sidebar
+- **Element selection** — click to select text, devices, or overlay images with visual feedback
+- **Helpful rich-text tooltips** — formatting controls include hover/focus tooltips
 - **Dark mode UI** — sleek dark interface that's easy on the eyes
 
 ## 🚀 Quick Start
@@ -125,15 +133,18 @@ src/
 │   ├── CanvasPreview/       # Main canvas, screenshot cards, device container, overlays
 │   ├── DeviceFrame/         # Device mockups (flat 2D & 3D with edges)
 │   ├── FontPicker/          # Google Fonts search & selection
+│   ├── GitHubStarModal.tsx  # Post-export GitHub star modal
 │   ├── LeftSidebar/         # Device picker, color picker, export controls
 │   ├── ProjectSwitcher/     # Project management UI
 │   ├── RichTextEditor/      # Rich text formatting toolbar & editor
-│   ├── RightSidebar/        # Layout, appearance, content, overlay controls
+│   ├── RightSidebar/        # Layout, appearance, content, device, overlay controls
 │   ├── EditorLayout.tsx     # Main editor layout shell
 │   └── ui/                  # shadcn/ui components
 ├── context/
 │   └── EditorContext.tsx     # Global editor state & actions
 ├── lib/
+│   ├── device-instances.ts  # Device instance helpers and legacy normalization
+│   ├── device-overflow.ts   # Cross-screen device overflow calculations
 │   ├── export-utils.ts      # Canvas-based screenshot export (flat & 3D)
 │   ├── google-fonts.ts      # Google Fonts API loader
 │   ├── rich-text-canvas.ts  # Rich text rendering for canvas export
@@ -152,14 +163,16 @@ src/
 1. **Select a device** — pick from iPhones, iPads, or Samsung devices in the left sidebar
 2. **Choose a color** — select a device frame color
 3. **Upload a screenshot** — add your app's screenshot to the device screen
-4. **Edit text** — click headlines/subheadlines to type, use the rich text toolbar to format
-5. **Pick a font** — browse Google Fonts to find the perfect typeface
-6. **Set a background** — choose a solid color or gradient preset
-7. **Position the device** — use presets or manually adjust size, position, rotation
-8. **Switch to 3D** — toggle to 3D mode and adjust perspective angles
-9. **Add overlays** — upload badges, logos, or decorations and layer them around the device
-10. **Manage screenshots** — add more screenshots to create a complete set
-11. **Export** — download all screenshots at App Store resolution
+4. **Add more devices** — build multi-device layouts and customize each frame independently
+5. **Edit text** — click headlines/subheadlines to type, use the rich text toolbar to format and highlight text
+6. **Pick a font** — browse Google Fonts to find the perfect typeface
+7. **Set a background** — choose a solid color or gradient preset
+8. **Position the device** — use presets or manually adjust size, position, rotation, and shadow
+9. **Switch to 3D** — toggle to 3D mode and adjust perspective angles
+10. **Span screenshots** — drag devices past the left or right edge to continue them into adjacent screenshots
+11. **Add overlays** — upload badges, logos, or decorations and layer them around the device
+12. **Manage screenshots** — add more screenshots to create a complete set
+13. **Export** — download all screenshots at App Store resolution, then optionally star the project from the post-export modal
 
 ## 🤝 Contributing
 
