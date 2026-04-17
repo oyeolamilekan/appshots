@@ -4,6 +4,48 @@ export const GITHUB_REPO_URL = "https://github.com/oyeolamilekan/appshots";
 
 export const devices: DeviceSpec[] = [
   {
+    id: "iphone-16-pro-max",
+    label: "iPhone 16 Pro Max",
+    width: 1320,
+    height: 2868,
+    screenInset: { top: 20, right: 20, bottom: 20, left: 20 },
+    cornerRadius: 110,
+    frameRadius: { outer: "14%/6.5%", inner: "12.5%/5.8%" },
+    notchWidth: 250,
+    notchHeight: 70,
+    hasIsland: true,
+    colors: [
+      {
+        id: "black",
+        label: "Black Titanium",
+        frame: "#282828",
+        frameColors: ["#4a4a4a", "#282828", "#1c1c1e", "#282828", "#4a4a4a"],
+        screen: "#000",
+      },
+      {
+        id: "natural",
+        label: "Natural",
+        frame: "#8C8883",
+        frameColors: ["#AAA59E", "#8C8883", "#75726D", "#8C8883", "#AAA59E"],
+        screen: "#000",
+      },
+      {
+        id: "desert",
+        label: "Desert",
+        frame: "#C2A66E",
+        frameColors: ["#D4BA85", "#C2A66E", "#A88E57", "#C2A66E", "#D4BA85"],
+        screen: "#000",
+      },
+      {
+        id: "white",
+        label: "White",
+        frame: "#E3E3E4",
+        frameColors: ["#F2F2F2", "#E3E3E4", "#D1D1D2", "#E3E3E4", "#F2F2F2"],
+        screen: "#000",
+      },
+    ],
+  },
+  {
     id: "iphone-15-pro-max",
     label: "iPhone 15 Pro Max",
     width: 1290,
@@ -247,17 +289,33 @@ export const gradientPresets: GradientPreset[] = [
 
 export const exportSizes: ExportSize[] = [
   {
+    id: "6.9",
+    label: '6.9" iPhone 16 Pro Max (1320 × 2868)',
+    width: 1320,
+    height: 2868,
+  },
+  {
     id: "6.7",
-    label: "6.7 inch (iPhone 13/12 Pro Max)",
-    width: 1284,
-    height: 2778,
+    label: '6.7" iPhone 15/14 Pro Max (1290 × 2796)',
+    width: 1290,
+    height: 2796,
   },
   {
     id: "6.5",
-    label: "6.5 inch (iPhone 11 Pro Max)",
+    label: '6.5" iPhone 11 Pro Max (1242 × 2688)',
     width: 1242,
     height: 2688,
   },
-  { id: "5.5", label: "5.5 inch (iPhone 8 Plus)", width: 1242, height: 2208 },
-  { id: "ipad", label: "12.9 inch (iPad Pro)", width: 2048, height: 2732 },
+  {
+    id: "5.5",
+    label: '5.5" iPhone 8 Plus (1242 × 2208)',
+    width: 1242,
+    height: 2208,
+  },
+  {
+    id: "ipad",
+    label: '12.9" iPad Pro (2048 × 2732)',
+    width: 2048,
+    height: 2732,
+  },
 ];
