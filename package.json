@@ -5,8 +5,12 @@
   "scripts": {
     "dev": "bun --bun vite dev",
     "build": "bun --bun vite build && tsc",
+    "build:render": "bun --bun vite build --config vite.render.config.ts",
     "preview": "bun --bun vite preview",
-    "test": "bun --bun vitest run"
+    "test": "bun --bun vitest run",
+    "mcp:setup": "bun run build:render && cd mcp && bun install && bunx playwright install chromium && bun run build",
+    "mcp:build": "bun run build:render && cd mcp && bun run build",
+    "mcp:dev": "cd mcp && bun run dev"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.6",

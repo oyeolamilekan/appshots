@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AppShots Headless Renderer</title>
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body>
+    <!--
+      Offscreen render target for the AppShots MCP server. Not a user-facing
+      page: it only exposes window.__APPSHOTS_RENDER__ for Playwright.
+    -->
+    <script type="module" src="/src/render-entry.ts"></script>
+  </body>
+</html>
