@@ -114,6 +114,27 @@ bun run build
 
 The built files will be in the `dist/` directory.
 
+### 🐳 Self-Hosting with Docker
+
+The app is fully client-side — no backend, no database, no API keys. Everything you need to
+run it yourself is in `docker-compose.yml`:
+
+```bash
+docker compose up -d --build
+```
+
+Then open [http://localhost:8080](http://localhost:8080).
+
+To use a different port, set `APPSHOTS_PORT`:
+
+```bash
+APPSHOTS_PORT=3000 docker compose up -d --build
+```
+
+The build is a two-stage image: Bun compiles the site to static files, and nginx serves them
+with SPA routing fallback and long-lived caching for hashed assets. Pull new changes and
+re-run `docker compose up -d --build` to update; `docker compose down` stops it.
+
 ## 🛠️ Tech Stack
 
 - **Framework**: [React 19](https://react.dev/)
