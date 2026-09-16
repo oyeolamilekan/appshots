@@ -5,6 +5,7 @@
  */
 
 import type { DeviceInstance, DeviceSpec } from "../../types";
+import { ANONYMOUS_TOP_CROP } from "../../lib/device-instances";
 import { ScreenContent } from "./ScreenContent";
 
 interface AnonymousScreenProps {
@@ -42,6 +43,7 @@ export const AnonymousScreen = ({
       lightClipPath={lightClipPath}
       darkClipPath={darkClipPath}
       hairlineClipPath={hairlineClipPath}
+      topCrop={ANONYMOUS_TOP_CROP}
     />
   </div>
 );

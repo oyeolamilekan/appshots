@@ -4,6 +4,7 @@ import {
   createDeviceInstance,
   ensureDeviceInstances,
   getDeviceSpecById,
+  getAnonymousImageSourceRect,
   isAnonymousDevice,
 } from "./device-instances";
 
@@ -132,6 +133,15 @@ describe("anonymous device", () => {
     expect(spec.colors).toEqual([
       expect.objectContaining({ id: "none", frame: "transparent" }),
     ]);
+  });
+
+  it("crops the island/notch region from anonymous screenshots", () => {
+    expect(getAnonymousImageSourceRect(1290, 2796)).toEqual({
+      sx: 0,
+      sy: 2796 * 0.065,
+      sw: 1290,
+      sh: 2796 * (1 - 0.065),
+    });
   });
 
   it("creates an anonymous device instance with the dummy color", () => {

@@ -33,8 +33,21 @@ export const DEFAULT_DEVICE_SHADOW: ShadowConfig = {
 export const ANONYMOUS_DEVICE_ID = "anonymous";
 export const DEFAULT_DEVICE_ID = "iphone-15-pro-max";
 
+/** Fraction of screenshot height to clip from the top to hide island/notch. */
+export const ANONYMOUS_TOP_CROP = 0.065;
+
 export const isAnonymousDevice = (deviceId: string): boolean =>
   deviceId === ANONYMOUS_DEVICE_ID;
+
+export const getAnonymousImageSourceRect = (
+  imageWidth: number,
+  imageHeight: number,
+) => ({
+  sx: 0,
+  sy: imageHeight * ANONYMOUS_TOP_CROP,
+  sw: imageWidth,
+  sh: imageHeight * (1 - ANONYMOUS_TOP_CROP),
+});
 
 export const getDeviceSpecById = (deviceId: string): DeviceSpec =>
   devices.find((device) => device.id === deviceId) ??

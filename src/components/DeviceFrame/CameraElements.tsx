@@ -8,6 +8,7 @@
  */
 
 import type { DeviceSpec } from "../../types";
+import { isAnonymousDevice } from "../../lib/device-instances";
 
 /**
  * Dynamic Island - Modern iPhone camera housing (iPhone 14 Pro+)
@@ -103,6 +104,10 @@ export const CameraElement = ({
   isSamsung,
   isSamsungTablet,
 }: CameraElementProps) => {
+  if (isAnonymousDevice(device.id)) {
+    return null;
+  }
+
   // Samsung devices use punch-hole camera
   if (isSamsung) {
     return <PunchHoleCamera isTablet={isSamsungTablet} />;

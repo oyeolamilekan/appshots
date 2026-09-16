@@ -8,7 +8,7 @@ import type {
 } from "../types";
 import { gradientPresets } from "../constants";
 import { drawRichText } from "./rich-text-canvas";
-import { getDeviceColorById, getDeviceSpecById, isAnonymousDevice } from "./device-instances";
+import { ANONYMOUS_TOP_CROP, getAnonymousImageSourceRect, getDeviceColorById, getDeviceSpecById, isAnonymousDevice } from "./device-instances";
 import { getRenderableDevicesForScreenshot } from "./device-overflow";
 import {
   getDeviceScreenRect,
@@ -159,6 +159,7 @@ const drawScreenImages = async (
   screenshotSrc: string | null,
   screenshotSrcDark: string | null,
   split: ScreenSplitDraw | null,
+  topCrop: number = 0,
 ) => {
   const clipToScreen = () => {
     ctx.beginPath();
@@ -190,7 +191,22 @@ const drawScreenImages = async (
       tracePercentPolygon(ctx, points, screenX, screenY, screenW, screenH);
       ctx.clip();
     }
-    ctx.drawImage(img, screenX, screenY, screenW, screenH);
+    if (topCrop > 0) {
+      const source = getAnonymousImageSourceRect(img.width, img.height);
+      ctx.drawImage(
+        img,
+        source.sx,
+        source.sy,
+        source.sw,
+        source.sh,
+        screenX,
+        screenY,
+        screenW,
+        screenH,
+      );
+    } else {
+      ctx.drawImage(img, screenX, screenY, screenW, screenH);
+    }
     ctx.restore();
   };
 
@@ -446,6 +462,7 @@ const drawAnonymousScreen = async (
     screenshotSrc,
     screenshotSrcDark,
     split,
+    ANONYMOUS_TOP_CROP,
   );
 };
 

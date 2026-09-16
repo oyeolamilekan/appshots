@@ -5,6 +5,8 @@
  * Shows either the uploaded screenshot or a placeholder message.
  */
 
+import type { CSSProperties } from "react";
+
 interface ScreenContentProps {
   /** URL of the screenshot image, or null if no image is uploaded */
   screenshotSrc: string | null;
@@ -18,7 +20,65 @@ interface ScreenContentProps {
   darkClipPath?: string;
   /** Clip-path for the split hairline */
   hairlineClipPath?: string;
+  /** Fraction of the image to clip from the top (hides island/notch). */
+  topCrop?: number;
 }
+
+const croppedImageStyle = (topCrop: number): CSSProperties => ({
+  height: `${(1 + topCrop) * 100}%`,
+  marginTop: `-${topCrop * 100}%`,
+  width: "100%",
+  objectFit: "fill",
+});
+
+const ScreenImage = ({
+  src,
+  alt,
+  clipPath,
+  topCrop,
+  placeholderClassName,
+  placeholderLabel,
+}: {
+  src: string | null;
+  alt: string;
+  clipPath?: string;
+  topCrop: number;
+  placeholderClassName: string;
+  placeholderLabel: string;
+}) => {
+  const cropped = topCrop > 0;
+  const image = src ? (
+    <img
+      src={src}
+      alt={alt}
+      className={cropped ? "object-fill w-full" : "w-full h-full object-fill"}
+      style={cropped ? croppedImageStyle(topCrop) : undefined}
+    />
+  ) : (
+    <div
+      className={`w-full h-full flex items-center justify-center ${placeholderClassName}`}
+    >
+      <span className="text-[10px] text-gray-400">{placeholderLabel}</span>
+    </div>
+  );
+
+  if (clipPath) {
+    return (
+      <div
+        className="absolute inset-0 overflow-hidden"
+        style={{ clipPath }}
+      >
+        {image}
+      </div>
+    );
+  }
+
+  if (cropped) {
+    return <div className="w-full h-full overflow-hidden">{image}</div>;
+  }
+
+  return image;
+};
 
 /**
  * Displays the device screen content.
@@ -30,40 +90,27 @@ export const ScreenContent = ({
   lightClipPath,
   darkClipPath,
   hairlineClipPath,
+  topCrop = 0,
 }: ScreenContentProps) => {
   if (themeSplit) {
     return (
       <div className="relative w-full h-full bg-[#1c1c1e]">
-        {screenshotSrc ? (
-          <img
-            src={screenshotSrc}
-            alt="Light screenshot"
-            className="absolute inset-0 w-full h-full object-fill"
-            style={{ clipPath: lightClipPath }}
-          />
-        ) : (
-          <div
-            className="absolute inset-0 flex items-center justify-center bg-[#f4f4f5]"
-            style={{ clipPath: lightClipPath }}
-          >
-            <span className="text-gray-400 text-[10px]">No light image</span>
-          </div>
-        )}
-        {screenshotSrcDark ? (
-          <img
-            src={screenshotSrcDark}
-            alt="Dark screenshot"
-            className="absolute inset-0 w-full h-full object-fill"
-            style={{ clipPath: darkClipPath }}
-          />
-        ) : (
-          <div
-            className="absolute inset-0 flex items-center justify-center bg-[#1c1c1e]"
-            style={{ clipPath: darkClipPath }}
-          >
-            <span className="text-gray-600 text-[10px]">No dark image</span>
-          </div>
-        )}
+        <ScreenImage
+          src={screenshotSrc}
+          alt="Light screenshot"
+          clipPath={lightClipPath}
+          topCrop={topCrop}
+          placeholderClassName="bg-[#f4f4f5]"
+          placeholderLabel="No light image"
+        />
+        <ScreenImage
+          src={screenshotSrcDark}
+          alt="Dark screenshot"
+          clipPath={darkClipPath}
+          topCrop={topCrop}
+          placeholderClassName="bg-[#1c1c1e]"
+          placeholderLabel="No dark image"
+        />
         {hairlineClipPath && (
           <div
             className="absolute inset-0 bg-white pointer-events-none"
@@ -76,10 +123,12 @@ export const ScreenContent = ({
 
   if (screenshotSrc) {
     return (
-      <img
+      <ScreenImage
         src={screenshotSrc}
         alt="Screenshot"
-        className="w-full h-full object-fill"
+        topCrop={topCrop}
+        placeholderClassName="bg-[#1c1c1e]"
+        placeholderLabel="No image"
       />
     );
   }
