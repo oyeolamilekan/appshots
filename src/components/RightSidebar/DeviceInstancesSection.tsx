@@ -49,8 +49,18 @@ export const DeviceInstancesSection = ({
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-300 truncate">{spec.label}</p>
                 <p className="text-[10px] text-gray-500">
-                  {device.screenshotSrc ? "Image attached" : "No image"} · Layer{" "}
-                  {index + 1} of {screenshot.devices.length}
+                  {screenshot.themeSplit
+                    ? device.screenshotSrc && device.screenshotSrcDark
+                      ? "Light + dark attached"
+                      : device.screenshotSrc
+                        ? "Light attached"
+                        : device.screenshotSrcDark
+                          ? "Dark attached"
+                          : "No image"
+                    : device.screenshotSrc
+                      ? "Image attached"
+                      : "No image"}{" "}
+                  · Layer {index + 1} of {screenshot.devices.length}
                 </p>
               </div>
               <div className="flex items-center gap-1">

@@ -4,8 +4,80 @@
  * Background mode and color/gradient selection.
  */
 
-import type { Screenshot, GradientPreset } from "../../types";
+import type { BackgroundMode, GradientPreset, Screenshot } from "../../types";
 import { STYLES } from "./constants";
+
+interface BackgroundControlsProps {
+  label: string;
+  mode: BackgroundMode;
+  color: string;
+  gradientPresetId: string | null;
+  gradientPresets: GradientPreset[];
+  onModeChange: (mode: BackgroundMode) => void;
+  onColorChange: (color: string) => void;
+  onGradientChange: (presetId: string) => void;
+}
+
+const BackgroundControls = ({
+  label,
+  mode,
+  color,
+  gradientPresetId,
+  gradientPresets,
+  onModeChange,
+  onColorChange,
+  onGradientChange,
+}: BackgroundControlsProps) => (
+  <div>
+    <label className="block text-xs text-gray-400 mb-1">{label}</label>
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <button
+          onClick={() => onModeChange("solid")}
+          className={`${STYLES.modeButton} ${
+            mode === "solid" ? STYLES.modeButtonActive : STYLES.modeButtonInactive
+          }`}
+        >
+          Solid
+        </button>
+        <button
+          onClick={() => onModeChange("gradient")}
+          className={`${STYLES.modeButton} ${
+            mode === "gradient"
+              ? STYLES.modeButtonActive
+              : STYLES.modeButtonInactive
+          }`}
+        >
+          Gradient
+        </button>
+      </div>
+
+      {mode === "solid" ? (
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => onColorChange(e.target.value)}
+          className={STYLES.colorInput}
+        />
+      ) : (
+        <div className="grid grid-cols-3 gap-1">
+          {gradientPresets.map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => onGradientChange(preset.id)}
+              className={`${STYLES.gradientButton} ${
+                gradientPresetId === preset.id ? STYLES.gradientButtonActive : ""
+              }`}
+              style={{
+                background: `linear-gradient(135deg, ${preset.from}, ${preset.to})`,
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+);
 
 interface BackgroundPickerProps {
   /** Active screenshot data */
@@ -20,69 +92,57 @@ interface BackgroundPickerProps {
  * BackgroundPicker - Background style selector
  *
  * Toggle between solid color and gradient backgrounds.
- *
- * @param props - Component props
+ * When light/dark split is enabled, both sides are edited independently.
  */
 export const BackgroundPicker = ({
   screenshot,
   gradientPresets,
   onUpdateScreenshot,
-}: BackgroundPickerProps) => (
-  <div>
-    <label className="block text-xs text-gray-400 mb-1">Background</label>
-    <div className="space-y-2">
-      {/* Mode toggle */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => onUpdateScreenshot({ backgroundMode: "solid" })}
-          className={`${STYLES.modeButton} ${
-            screenshot.backgroundMode === "solid"
-              ? STYLES.modeButtonActive
-              : STYLES.modeButtonInactive
-          }`}
-        >
-          Solid
-        </button>
-        <button
-          onClick={() => onUpdateScreenshot({ backgroundMode: "gradient" })}
-          className={`${STYLES.modeButton} ${
-            screenshot.backgroundMode === "gradient"
-              ? STYLES.modeButtonActive
-              : STYLES.modeButtonInactive
-          }`}
-        >
-          Gradient
-        </button>
-      </div>
-
-      {/* Color picker or gradient presets */}
-      {screenshot.backgroundMode === "solid" ? (
-        <input
-          type="color"
-          value={screenshot.backgroundColor}
-          onChange={(e) =>
-            onUpdateScreenshot({ backgroundColor: e.target.value })
-          }
-          className={STYLES.colorInput}
-        />
-      ) : (
-        <div className="grid grid-cols-3 gap-1">
-          {gradientPresets.map((preset) => (
-            <button
-              key={preset.id}
-              onClick={() => onUpdateScreenshot({ gradientPresetId: preset.id })}
-              className={`${STYLES.gradientButton} ${
-                screenshot.gradientPresetId === preset.id
-                  ? STYLES.gradientButtonActive
-                  : ""
-              }`}
-              style={{
-                background: `linear-gradient(135deg, ${preset.from}, ${preset.to})`,
-              }}
-            />
-          ))}
-        </div>
-      )}
+}: BackgroundPickerProps) =>
+  screenshot.themeSplit ? (
+    <div className="space-y-3">
+      <BackgroundControls
+        label="Light Background"
+        mode={screenshot.backgroundMode}
+        color={screenshot.backgroundColor}
+        gradientPresetId={screenshot.gradientPresetId}
+        gradientPresets={gradientPresets}
+        onModeChange={(backgroundMode) => onUpdateScreenshot({ backgroundMode })}
+        onColorChange={(backgroundColor) =>
+          onUpdateScreenshot({ backgroundColor })
+        }
+        onGradientChange={(gradientPresetId) =>
+          onUpdateScreenshot({ gradientPresetId })
+        }
+      />
+      <BackgroundControls
+        label="Dark Background"
+        mode={screenshot.backgroundModeDark}
+        color={screenshot.backgroundColorDark}
+        gradientPresetId={screenshot.gradientPresetIdDark}
+        gradientPresets={gradientPresets}
+        onModeChange={(backgroundModeDark) =>
+          onUpdateScreenshot({ backgroundModeDark })
+        }
+        onColorChange={(backgroundColorDark) =>
+          onUpdateScreenshot({ backgroundColorDark })
+        }
+        onGradientChange={(gradientPresetIdDark) =>
+          onUpdateScreenshot({ gradientPresetIdDark })
+        }
+      />
     </div>
-  </div>
-);
+  ) : (
+    <BackgroundControls
+      label="Background"
+      mode={screenshot.backgroundMode}
+      color={screenshot.backgroundColor}
+      gradientPresetId={screenshot.gradientPresetId}
+      gradientPresets={gradientPresets}
+      onModeChange={(backgroundMode) => onUpdateScreenshot({ backgroundMode })}
+      onColorChange={(backgroundColor) => onUpdateScreenshot({ backgroundColor })}
+      onGradientChange={(gradientPresetId) =>
+        onUpdateScreenshot({ gradientPresetId })
+      }
+    />
+  );

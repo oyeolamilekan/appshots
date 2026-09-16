@@ -63,6 +63,7 @@ export const createDeviceInstance = (
     deviceId: defaultDevice.id,
     colorId: defaultColor.id,
     screenshotSrc: overrides.screenshotSrc ?? null,
+    screenshotSrcDark: overrides.screenshotSrcDark ?? null,
     x: overrides.x ?? 50,
     y: overrides.y ?? 30,
     scale: overrides.scale ?? 85,
@@ -118,6 +119,10 @@ export const ensureDeviceInstances = (
                 : fallbackColor.id,
             screenshotSrc:
               typeof device.screenshotSrc === "string" ? device.screenshotSrc : null,
+            screenshotSrcDark:
+              typeof device.screenshotSrcDark === "string"
+                ? device.screenshotSrcDark
+                : null,
             x: typeof device.x === "number" ? device.x : undefined,
             y: typeof device.y === "number" ? device.y : undefined,
             scale: typeof device.scale === "number" ? device.scale : undefined,
@@ -144,6 +149,7 @@ export const ensureDeviceInstances = (
             deviceId: fallbackDevice.id,
             colorId: fallbackColor.id,
             screenshotSrc: screenshot.screenshotSrc ?? null,
+            screenshotSrcDark: null,
             scale:
               typeof screenshot.deviceScale === "number"
                 ? screenshot.deviceScale

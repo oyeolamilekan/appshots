@@ -23,6 +23,10 @@ interface DeviceFrame3DProps {
   device: DeviceInstance;
   selectedDevice: DeviceSpec;
   selectedColor: DeviceColor;
+  themeSplit?: boolean;
+  lightClipPath?: string;
+  darkClipPath?: string;
+  hairlineClipPath?: string;
 }
 
 /** Total depth of the 3D extrusion in pixels */
@@ -42,6 +46,10 @@ export const DeviceFrame3D = ({
   device,
   selectedDevice,
   selectedColor,
+  themeSplit = false,
+  lightClipPath,
+  darkClipPath,
+  hairlineClipPath,
 }: DeviceFrame3DProps) => {
   const isSamsungDevice = selectedDevice.id.startsWith("samsung-");
   const isSamsungTablet = selectedDevice.id.includes("tab");
@@ -103,7 +111,14 @@ export const DeviceFrame3D = ({
           aspectRatio: `${selectedDevice.width} / ${selectedDevice.height}`,
         }}
       >
-        <AnonymousScreen device={device} selectedDevice={selectedDevice} />
+        <AnonymousScreen
+          device={device}
+          selectedDevice={selectedDevice}
+          themeSplit={themeSplit}
+          lightClipPath={lightClipPath}
+          darkClipPath={darkClipPath}
+          hairlineClipPath={hairlineClipPath}
+        />
       </div>
     );
   }
@@ -127,7 +142,14 @@ export const DeviceFrame3D = ({
           className="relative w-full h-full overflow-hidden"
           style={screenStyle}
         >
-          <ScreenContent screenshotSrc={device.screenshotSrc} />
+          <ScreenContent
+            screenshotSrc={device.screenshotSrc}
+            screenshotSrcDark={device.screenshotSrcDark}
+            themeSplit={themeSplit}
+            lightClipPath={lightClipPath}
+            darkClipPath={darkClipPath}
+            hairlineClipPath={hairlineClipPath}
+          />
           <CameraElement
             device={selectedDevice}
             isSamsung={isSamsungDevice}

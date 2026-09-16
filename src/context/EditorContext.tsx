@@ -18,7 +18,7 @@ import type {
   Project,
   SelectedElement,
 } from "../types";
-import { exportSizes, gradientPresets } from "../constants";
+import { exportSizes } from "../constants";
 import { exportScreenshots } from "../lib/export-utils";
 import {
   cloneDeviceInstance,
@@ -33,6 +33,12 @@ import {
   useEditorPersistence,
   clearPersistedState,
 } from "../lib/useLocalStorage";
+import {
+  DEFAULT_BACKGROUND_COLOR_DARK,
+  DEFAULT_THEME_SPLIT_ANGLE,
+  DEFAULT_THEME_SPLIT_OFFSET,
+  getScreenshotBackgroundFill,
+} from "../lib/theme-split";
 
 function generateId() {
   return Math.random().toString(36).substring(2, 9);
@@ -117,9 +123,12 @@ interface EditorContextType {
   sendImageBackward: (imageId: string) => void;
   bringImageToFront: (imageId: string) => void;
   sendImageToBack: (imageId: string) => void;
-  handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  handleFileUpload: (
+    event: React.ChangeEvent<HTMLInputElement>,
+    slot?: "light" | "dark",
+  ) => void;
   handleExport: () => void;
-  getBackgroundStyle: (screenshot: Screenshot) => string;
+  getBackgroundStyle: (screenshot: Screenshot, side?: "light" | "dark") => string;
   resetEditor: () => void;
 }
 
@@ -154,6 +163,12 @@ const createDefaultScreenshot = (
     backgroundColor: "#8b5cf6",
     backgroundMode: "solid",
     gradientPresetId: null,
+    backgroundColorDark: DEFAULT_BACKGROUND_COLOR_DARK,
+    backgroundModeDark: "solid",
+    gradientPresetIdDark: null,
+    themeSplit: false,
+    themeSplitAngle: DEFAULT_THEME_SPLIT_ANGLE,
+    themeSplitOffset: DEFAULT_THEME_SPLIT_OFFSET,
     textColor: "#ffffff",
     headlineX: 50,
     headlineY: 10,
@@ -194,6 +209,16 @@ const normalizeScreenshot = (
   return {
     ...baseScreenshot,
     ...rest,
+    backgroundColorDark:
+      screenshot.backgroundColorDark ?? baseScreenshot.backgroundColorDark,
+    backgroundModeDark:
+      screenshot.backgroundModeDark ?? baseScreenshot.backgroundModeDark,
+    gradientPresetIdDark:
+      screenshot.gradientPresetIdDark ?? baseScreenshot.gradientPresetIdDark,
+    themeSplit: screenshot.themeSplit ?? baseScreenshot.themeSplit,
+    themeSplitAngle: screenshot.themeSplitAngle ?? baseScreenshot.themeSplitAngle,
+    themeSplitOffset:
+      screenshot.themeSplitOffset ?? baseScreenshot.themeSplitOffset,
     overlayImages: screenshot.overlayImages ?? [],
     devices: deviceInstances,
     activeDeviceId,
@@ -512,6 +537,12 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       backgroundColor: activeScreenshot.backgroundColor,
       backgroundMode: activeScreenshot.backgroundMode,
       gradientPresetId: activeScreenshot.gradientPresetId,
+      backgroundColorDark: activeScreenshot.backgroundColorDark,
+      backgroundModeDark: activeScreenshot.backgroundModeDark,
+      gradientPresetIdDark: activeScreenshot.gradientPresetIdDark,
+      themeSplit: activeScreenshot.themeSplit,
+      themeSplitAngle: activeScreenshot.themeSplitAngle,
+      themeSplitOffset: activeScreenshot.themeSplitOffset,
       textColor: activeScreenshot.textColor,
       headlineX: 50,
       headlineY: 10,
@@ -923,7 +954,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    slot: "light" | "dark" = "light",
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -933,7 +967,12 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         updateActiveScreenshot({
           devices: activeScreenshot.devices.map((device) =>
             device.id === activeDevice.id
-              ? { ...device, screenshotSrc: result }
+              ? {
+                  ...device,
+                  ...(slot === "dark"
+                    ? { screenshotSrcDark: result }
+                    : { screenshotSrc: result }),
+                }
               : device,
           ),
         });
@@ -943,15 +982,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     event.target.value = "";
   };
 
-  const getBackgroundStyle = (screenshot: Screenshot) => {
-    if (screenshot.backgroundMode === "gradient") {
-      const preset =
-        gradientPresets.find((p) => p.id === screenshot.gradientPresetId) ??
-        gradientPresets[0];
-      return `linear-gradient(180deg, ${preset.from}, ${preset.to})`;
-    }
-    return screenshot.backgroundColor;
-  };
+  const getBackgroundStyle = (
+    screenshot: Screenshot,
+    side: "light" | "dark" = "light",
+  ) => getScreenshotBackgroundFill(screenshot, side);
 
   const handleExport = () => {
     void exportScreenshots({

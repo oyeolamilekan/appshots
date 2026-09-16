@@ -58,11 +58,14 @@ export type ImageOverlay = {
 
 export type DeviceStyle = "flat" | "3d";
 
+export type BackgroundMode = "solid" | "gradient" | "image";
+
 export type DeviceInstance = {
   id: string;
   deviceId: string;
   colorId: string;
   screenshotSrc: string | null;
+  screenshotSrcDark: string | null;
   x: number;
   y: number;
   scale: number;
@@ -78,8 +81,14 @@ export type Screenshot = {
   headline: string;
   subheadline: string;
   backgroundColor: string;
-  backgroundMode: "solid" | "gradient" | "image";
+  backgroundMode: BackgroundMode;
   gradientPresetId: string | null;
+  backgroundColorDark: string;
+  backgroundModeDark: BackgroundMode;
+  gradientPresetIdDark: string | null;
+  themeSplit: boolean;
+  themeSplitAngle: number;
+  themeSplitOffset: number;
   textColor: string;
   headlineX: number;
   headlineY: number;

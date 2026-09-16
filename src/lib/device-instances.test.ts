@@ -12,6 +12,7 @@ describe("createDeviceInstance", () => {
     const device = createDeviceInstance();
 
     expect(device.screenshotSrc).toBeNull();
+    expect(device.screenshotSrcDark).toBeNull();
     expect(device.x).toBe(50);
     expect(device.y).toBe(30);
     expect(device.scale).toBe(85);
@@ -51,6 +52,7 @@ describe("ensureDeviceInstances", () => {
       deviceId: "iphone-15-pro-max",
       colorId: "natural",
       screenshotSrc: "data:image/png;base64,legacy",
+      screenshotSrcDark: null,
       scale: 72,
       y: 42,
       rotation: 12,

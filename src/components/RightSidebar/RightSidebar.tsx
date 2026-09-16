@@ -76,6 +76,7 @@ export const RightSidebar = () => {
 
         <ScreenshotImageSection
           device={activeDevice}
+          themeSplit={activeScreenshot.themeSplit}
           fileInputRef={fileInputRef}
           onFileUpload={handleFileUpload}
         />

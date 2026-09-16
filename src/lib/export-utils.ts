@@ -1,4 +1,5 @@
 import type {
+  BackgroundMode,
   Screenshot,
   DeviceSpec,
   DeviceColor,
@@ -9,6 +10,13 @@ import { gradientPresets } from "../constants";
 import { drawRichText } from "./rich-text-canvas";
 import { getDeviceColorById, getDeviceSpecById, isAnonymousDevice } from "./device-instances";
 import { getRenderableDevicesForScreenshot } from "./device-overflow";
+import {
+  getDeviceScreenRect,
+  getSplitClipPoints,
+  getSplitHairlinePoints,
+  tracePercentPolygon,
+  type PercentRect,
+} from "./theme-split";
 import JSZip from "jszip";
 
 interface ExportOptions {
@@ -65,6 +73,170 @@ const downloadAsZip = async (files: { name: string; data: string }[]) => {
   
   // Clean up
   URL.revokeObjectURL(url);
+};
+
+type ScreenSplitDraw = {
+  enabled: boolean;
+  angle: number;
+  offset: number;
+  canvasAspect: number;
+  screenRect: PercentRect;
+};
+
+const loadCanvasImage = (src: string): Promise<HTMLImageElement | null> =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+
+const applyBackgroundFill = (
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  mode: BackgroundMode,
+  color: string,
+  gradientPresetId: string | null,
+) => {
+  if (mode === "gradient") {
+    const preset =
+      gradientPresets.find((preset) => preset.id === gradientPresetId) ??
+      gradientPresets[0];
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, preset.from);
+    gradient.addColorStop(1, preset.to);
+    ctx.fillStyle = gradient;
+  } else {
+    ctx.fillStyle = color;
+  }
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+};
+
+const fillScreenshotBackground = (
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  screenshot: Screenshot,
+) => {
+  const fillSide = (side: "light" | "dark") => {
+    const mode =
+      side === "dark" ? screenshot.backgroundModeDark : screenshot.backgroundMode;
+    const color =
+      side === "dark" ? screenshot.backgroundColorDark : screenshot.backgroundColor;
+    const presetId =
+      side === "dark"
+        ? screenshot.gradientPresetIdDark
+        : screenshot.gradientPresetId;
+
+    ctx.save();
+    if (screenshot.themeSplit) {
+      const points = getSplitClipPoints(
+        screenshot.themeSplitAngle,
+        screenshot.themeSplitOffset,
+        side,
+        canvas.width / canvas.height,
+      );
+      tracePercentPolygon(ctx, points, 0, 0, canvas.width, canvas.height);
+      ctx.clip();
+    }
+    applyBackgroundFill(ctx, canvas, mode, color, presetId);
+    ctx.restore();
+  };
+
+  fillSide("light");
+  if (screenshot.themeSplit) {
+    fillSide("dark");
+  }
+};
+
+const drawScreenImages = async (
+  ctx: CanvasRenderingContext2D,
+  screenX: number,
+  screenY: number,
+  screenW: number,
+  screenH: number,
+  screenRadius: number,
+  screenshotSrc: string | null,
+  screenshotSrcDark: string | null,
+  split: ScreenSplitDraw | null,
+) => {
+  const clipToScreen = () => {
+    ctx.beginPath();
+    ctx.roundRect(screenX, screenY, screenW, screenH, screenRadius);
+    ctx.clip();
+  };
+
+  const drawSrc = async (
+    src: string | null,
+    side: "light" | "dark",
+  ) => {
+    if (!src) return;
+    const img = await loadCanvasImage(src);
+    if (!img) return;
+    ctx.save();
+    clipToScreen();
+    if (split?.enabled) {
+      const points = getSplitClipPoints(
+        split.angle,
+        split.offset,
+        side,
+        split.canvasAspect,
+        split.screenRect,
+      );
+      if (points.length < 3) {
+        ctx.restore();
+        return;
+      }
+      tracePercentPolygon(ctx, points, screenX, screenY, screenW, screenH);
+      ctx.clip();
+    }
+    ctx.drawImage(img, screenX, screenY, screenW, screenH);
+    ctx.restore();
+  };
+
+  if (split?.enabled) {
+    await drawSrc(screenshotSrc, "light");
+    await drawSrc(screenshotSrcDark, "dark");
+    const hairline = getSplitHairlinePoints(
+      split.angle,
+      split.offset,
+      split.canvasAspect,
+      split.screenRect,
+    );
+    if (hairline.length >= 3) {
+      ctx.save();
+      clipToScreen();
+      tracePercentPolygon(ctx, hairline, screenX, screenY, screenW, screenH);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.restore();
+    }
+    return;
+  }
+
+  await drawSrc(screenshotSrc, "light");
+};
+
+const getScreenSplitDraw = (
+  screenshot: Screenshot,
+  canvas: HTMLCanvasElement,
+  device: DeviceInstance,
+  renderX: number,
+): ScreenSplitDraw | null => {
+  if (!screenshot.themeSplit) return null;
+  const spec = getDeviceSpecById(device.deviceId);
+  return {
+    enabled: true,
+    angle: screenshot.themeSplitAngle,
+    offset: screenshot.themeSplitOffset,
+    canvasAspect: canvas.width / canvas.height,
+    screenRect: getDeviceScreenRect(
+      device,
+      spec,
+      canvas.width / canvas.height,
+      renderX,
+    ),
+  };
 };
 
 // --- 3D Export Helpers ---
@@ -256,29 +428,25 @@ const drawAnonymousScreen = async (
   height: number,
   radius: number,
   screenshotSrc: string | null,
+  screenshotSrcDark: string | null = null,
+  split: ScreenSplitDraw | null = null,
 ) => {
   ctx.fillStyle = "#1c1c1e";
   ctx.beginPath();
   ctx.roundRect(x, y, width, height, radius);
   ctx.fill();
 
-  if (!screenshotSrc) return;
-
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  await new Promise<void>((resolve) => {
-    img.onload = () => {
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(x, y, width, height, radius);
-      ctx.clip();
-      ctx.drawImage(img, x, y, width, height);
-      ctx.restore();
-      resolve();
-    };
-    img.onerror = () => resolve();
-    img.src = screenshotSrc;
-  });
+  await drawScreenImages(
+    ctx,
+    x,
+    y,
+    width,
+    height,
+    radius,
+    screenshotSrc,
+    screenshotSrcDark,
+    split,
+  );
 };
 
 /**
@@ -292,8 +460,10 @@ const renderDeviceToOffscreen = async (
   selectedDevice: DeviceSpec,
   selectedColor: DeviceColor,
   screenshotSrc: string | null,
+  screenshotSrcDark: string | null,
   scaleX: number,
   isSamsung: boolean,
+  split: ScreenSplitDraw | null,
 ): Promise<HTMLCanvasElement> => {
   const offscreen = document.createElement("canvas");
   offscreen.width = Math.ceil(deviceWidthPx);
@@ -306,7 +476,17 @@ const renderDeviceToOffscreen = async (
   const dH = deviceHeightPx;
 
   if (isAnonymousDevice(selectedDevice.id)) {
-    await drawAnonymousScreen(ctx, dX, dY, dW, dH, frameRadius, screenshotSrc);
+    await drawAnonymousScreen(
+      ctx,
+      dX,
+      dY,
+      dW,
+      dH,
+      frameRadius,
+      screenshotSrc,
+      screenshotSrcDark,
+      split,
+    );
     return offscreen;
   }
 
@@ -369,24 +549,17 @@ const renderDeviceToOffscreen = async (
   ctx.roundRect(screenX, screenY, screenW, screenH, screenRadius);
   ctx.fill();
 
-  // --- Screenshot image ---
-  if (screenshotSrc) {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    await new Promise<void>((resolve) => {
-      img.onload = () => {
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(screenX, screenY, screenW, screenH, screenRadius);
-        ctx.clip();
-        ctx.drawImage(img, screenX, screenY, screenW, screenH);
-        ctx.restore();
-        resolve();
-      };
-      img.onerror = () => resolve();
-      img.src = screenshotSrc;
-    });
-  }
+  await drawScreenImages(
+    ctx,
+    screenX,
+    screenY,
+    screenW,
+    screenH,
+    screenRadius,
+    screenshotSrc,
+    screenshotSrcDark,
+    split,
+  );
 
   // --- Camera elements ---
   if (selectedDevice.hasIsland) {
@@ -451,6 +624,7 @@ const drawDeviceInstance = async (
   device: DeviceInstance,
   scaleX: number,
   renderX: number = device.x,
+  splitScreenshot?: Screenshot,
 ) => {
   const selectedDevice = getDeviceSpecById(device.deviceId);
   const selectedColor = getDeviceColorById(selectedDevice.id, device.colorId);
@@ -470,6 +644,9 @@ const drawDeviceInstance = async (
   const isAnonymous = isAnonymousDevice(selectedDevice.id);
   const bezelThickness = isAnonymous ? 0 : deviceWidthPx * 0.012;
   const isSamsungDevice = selectedDevice.id.startsWith("samsung-");
+  const split = splitScreenshot
+    ? getScreenSplitDraw(splitScreenshot, canvas, device, renderX)
+    : null;
 
   if (device.style === "3d") {
     const rotYDeg = device.rotateY ?? -15;
@@ -492,8 +669,10 @@ const drawDeviceInstance = async (
       selectedDevice,
       selectedColor,
       device.screenshotSrc,
+      device.screenshotSrcDark,
       scaleX,
       isSamsungDevice,
+      split,
     );
 
     if (isAnonymous) {
@@ -779,6 +958,8 @@ const drawDeviceInstance = async (
       deviceHeightPx,
       frameRadius,
       device.screenshotSrc,
+      device.screenshotSrcDark,
+      split,
     );
     ctx.restore();
     ctx.restore();
@@ -946,24 +1127,17 @@ const drawDeviceInstance = async (
   ctx.roundRect(screenX, screenY, screenWidthPx, screenHeightPx, screenRadius);
   ctx.fill();
 
-  const screenshotSrc = device.screenshotSrc;
-  if (screenshotSrc) {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    await new Promise<void>((resolve) => {
-      img.onload = () => {
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(screenX, screenY, screenWidthPx, screenHeightPx, screenRadius);
-        ctx.clip();
-        ctx.drawImage(img, screenX, screenY, screenWidthPx, screenHeightPx);
-        ctx.restore();
-        resolve();
-      };
-      img.onerror = () => resolve();
-      img.src = screenshotSrc;
-    });
-  }
+  await drawScreenImages(
+    ctx,
+    screenX,
+    screenY,
+    screenWidthPx,
+    screenHeightPx,
+    screenRadius,
+    device.screenshotSrc,
+    device.screenshotSrcDark,
+    split,
+  );
 
   if (selectedDevice.hasIsland) {
     const islandWidth = screenWidthPx * 0.28;
@@ -1038,19 +1212,7 @@ export const exportScreenshots = async ({
     // Account for padding (4px * 2) in preview to match text wrapping
     const paddingX = 8 * scaleX;
 
-    // Draw background
-    if (screenshot.backgroundMode === "gradient") {
-      const preset =
-        gradientPresets.find((p) => p.id === screenshot.gradientPresetId) ??
-        gradientPresets[0];
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, preset.from);
-      gradient.addColorStop(1, preset.to);
-      ctx.fillStyle = gradient;
-    } else {
-      ctx.fillStyle = screenshot.backgroundColor;
-    }
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    fillScreenshotBackground(ctx, canvas, screenshot);
 
     // Helper to draw overlay images
     const drawOverlayImages = async (layer: "behind" | "front") => {
@@ -1112,7 +1274,7 @@ export const exportScreenshots = async ({
 
     const renderableDevices = getRenderableDevicesForScreenshot(screenshots, i);
     for (const { device, localX } of renderableDevices) {
-      await drawDeviceInstance(ctx, canvas, device, scaleX, localX);
+      await drawDeviceInstance(ctx, canvas, device, scaleX, localX, screenshot);
     }
 
     const fontFamily = `'${screenshot.fontFamily}', sans-serif`;

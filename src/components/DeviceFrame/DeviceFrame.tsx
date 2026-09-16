@@ -29,6 +29,10 @@ interface DeviceFrameProps {
   selectedDevice: DeviceSpec;
   /** Selected device frame color */
   selectedColor: DeviceColor;
+  themeSplit?: boolean;
+  lightClipPath?: string;
+  darkClipPath?: string;
+  hairlineClipPath?: string;
 }
 
 /**
@@ -47,6 +51,10 @@ export const DeviceFrame = ({
   device,
   selectedDevice,
   selectedColor,
+  themeSplit = false,
+  lightClipPath,
+  darkClipPath,
+  hairlineClipPath,
 }: DeviceFrameProps) => {
   // Device type detection
   const isSamsungDevice = selectedDevice.id.startsWith("samsung-");
@@ -75,7 +83,16 @@ export const DeviceFrame = ({
   );
 
   if (isAnonymous) {
-    return <AnonymousScreen device={device} selectedDevice={selectedDevice} />;
+    return (
+      <AnonymousScreen
+        device={device}
+        selectedDevice={selectedDevice}
+        themeSplit={themeSplit}
+        lightClipPath={lightClipPath}
+        darkClipPath={darkClipPath}
+        hairlineClipPath={hairlineClipPath}
+      />
+    );
   }
 
   return (
@@ -85,7 +102,14 @@ export const DeviceFrame = ({
         className="relative w-full h-full overflow-hidden"
         style={screenStyle}
       >
-        <ScreenContent screenshotSrc={device.screenshotSrc} />
+        <ScreenContent
+          screenshotSrc={device.screenshotSrc}
+          screenshotSrcDark={device.screenshotSrcDark}
+          themeSplit={themeSplit}
+          lightClipPath={lightClipPath}
+          darkClipPath={darkClipPath}
+          hairlineClipPath={hairlineClipPath}
+        />
         <CameraElement
           device={selectedDevice}
           isSamsung={isSamsungDevice}

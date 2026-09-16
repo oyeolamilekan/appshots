@@ -10,6 +10,10 @@ import { ScreenContent } from "./ScreenContent";
 interface AnonymousScreenProps {
   device: DeviceInstance;
   selectedDevice: DeviceSpec;
+  themeSplit?: boolean;
+  lightClipPath?: string;
+  darkClipPath?: string;
+  hairlineClipPath?: string;
 }
 
 /**
@@ -18,6 +22,10 @@ interface AnonymousScreenProps {
 export const AnonymousScreen = ({
   device,
   selectedDevice,
+  themeSplit = false,
+  lightClipPath,
+  darkClipPath,
+  hairlineClipPath,
 }: AnonymousScreenProps) => (
   <div
     className="relative w-full overflow-hidden"
@@ -27,6 +35,13 @@ export const AnonymousScreen = ({
       backgroundColor: "#000",
     }}
   >
-    <ScreenContent screenshotSrc={device.screenshotSrc} />
+    <ScreenContent
+      screenshotSrc={device.screenshotSrc}
+      screenshotSrcDark={device.screenshotSrcDark}
+      themeSplit={themeSplit}
+      lightClipPath={lightClipPath}
+      darkClipPath={darkClipPath}
+      hairlineClipPath={hairlineClipPath}
+    />
   </div>
 );

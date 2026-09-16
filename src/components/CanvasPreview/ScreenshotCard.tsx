@@ -13,6 +13,11 @@ import { TextElement } from "./TextElement";
 import { DeviceContainer } from "./DeviceContainer";
 import { isElementSelected } from "./utils";
 import { Z_INDEX } from "./constants";
+import {
+  FULL_CANVAS_RECT,
+  getScreenshotBackgroundFill,
+  getThemeSplitClips,
+} from "../../lib/theme-split";
 
 interface ScreenshotCardProps {
   /** Screenshot data */
@@ -84,6 +89,15 @@ export const ScreenshotCard = ({
   const frontImages = screenshot.overlayImages.filter(
     (img) => img.layer !== "behind",
   );
+  const canvasAspect = exportSize.width / exportSize.height;
+  const backgroundClips = screenshot.themeSplit
+    ? getThemeSplitClips(
+        screenshot.themeSplitAngle,
+        screenshot.themeSplitOffset,
+        canvasAspect,
+        FULL_CANVAS_RECT,
+      )
+    : null;
 
   // Handle background click to deselect
   const handleBackgroundMouseDown = (e: React.MouseEvent) => {
@@ -104,13 +118,33 @@ export const ScreenshotCard = ({
         isActive ? "opacity-100" : "opacity-70 hover:opacity-100"
       }`}
       style={{
-        background: getBackgroundStyle(screenshot),
+        background: screenshot.themeSplit
+          ? undefined
+          : getBackgroundStyle(screenshot),
         aspectRatio: `${exportSize.width}/${exportSize.height}`,
         boxShadow: isActive
           ? "inset 0 0 0 2px rgba(255, 255, 255, 0.95)"
           : undefined,
       }}
     >
+      {screenshot.themeSplit && backgroundClips && (
+        <>
+          <div
+            className="absolute inset-0"
+            style={{
+              background: getScreenshotBackgroundFill(screenshot, "light"),
+              clipPath: backgroundClips.light,
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: getScreenshotBackgroundFill(screenshot, "dark"),
+              clipPath: backgroundClips.dark,
+            }}
+          />
+        </>
+      )}
       {/* Remove button */}
       {canRemove && <RemoveButton onRemove={onRemove} />}
 
@@ -180,6 +214,8 @@ export const ScreenshotCard = ({
             device={device}
             renderX={localX}
             zIndex={Z_INDEX.device + index}
+            screenshot={screenshot}
+            canvasAspect={canvasAspect}
             isSelected={isElementSelected(
               selectedElement,
               "device",

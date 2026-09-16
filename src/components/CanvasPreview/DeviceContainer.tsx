@@ -5,12 +5,16 @@
  * Supports both flat (2D) and 3D device rendering styles.
  */
 
-import type { DeviceInstance } from "../../types";
+import type { DeviceInstance, Screenshot } from "../../types";
 import { SelectionHandles } from "./SelectionHandles";
 import { DeviceFrame } from "../DeviceFrame";
 import { DeviceFrame3D } from "../DeviceFrame/DeviceFrame3D";
 import { getDeviceSelectionStyles, getDropShadowFilter } from "./utils";
 import { getDeviceColorById, getDeviceSpecById } from "../../lib/device-instances";
+import {
+  getDeviceScreenRect,
+  getThemeSplitClips,
+} from "../../lib/theme-split";
 
 interface DeviceContainerProps {
   /** Device instance data containing render settings */
@@ -23,6 +27,8 @@ interface DeviceContainerProps {
   isSelected: boolean;
   /** Whether mouse interactions are enabled */
   isInteractive: boolean;
+  screenshot?: Screenshot;
+  canvasAspect: number;
   /** Handler for mouse down event */
   onMouseDown: (e: React.MouseEvent) => void;
 }
@@ -39,11 +45,22 @@ export const DeviceContainer = ({
   zIndex,
   isSelected,
   isInteractive,
+  screenshot,
+  canvasAspect,
   onMouseDown,
 }: DeviceContainerProps) => {
   const is3D = device.style === "3d";
   const selectedDevice = getDeviceSpecById(device.deviceId);
   const selectedColor = getDeviceColorById(selectedDevice.id, device.colorId);
+  const splitClips =
+    screenshot?.themeSplit
+      ? getThemeSplitClips(
+          screenshot.themeSplitAngle,
+          screenshot.themeSplitOffset,
+          canvasAspect,
+          getDeviceScreenRect(device, selectedDevice, canvasAspect, renderX),
+        )
+      : null;
 
   return (
     <div
@@ -83,12 +100,20 @@ export const DeviceContainer = ({
             device={device}
             selectedDevice={selectedDevice}
             selectedColor={selectedColor}
+            themeSplit={Boolean(screenshot?.themeSplit)}
+            lightClipPath={splitClips?.light}
+            darkClipPath={splitClips?.dark}
+            hairlineClipPath={splitClips?.hairline}
           />
         ) : (
           <DeviceFrame
             device={device}
             selectedDevice={selectedDevice}
             selectedColor={selectedColor}
+            themeSplit={Boolean(screenshot?.themeSplit)}
+            lightClipPath={splitClips?.light}
+            darkClipPath={splitClips?.dark}
+            hairlineClipPath={splitClips?.hairline}
           />
         )}
         {isSelected && <SelectionHandles />}

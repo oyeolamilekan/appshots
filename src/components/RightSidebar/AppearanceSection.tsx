@@ -8,7 +8,9 @@ import { ChevronDown } from "lucide-react";
 import type { Screenshot, GradientPreset } from "../../types";
 import { SidebarSection } from "./SidebarSection";
 import { BackgroundPicker } from "./BackgroundPicker";
-import { STYLES } from "./constants";
+import { Toggle } from "./Toggle";
+import { RangeSlider } from "./RangeSlider";
+import { SLIDER_RANGES, STYLES } from "./constants";
 
 interface AppearanceSectionProps {
   /** Active screenshot data */
@@ -25,8 +27,6 @@ interface AppearanceSectionProps {
  * AppearanceSection - Visual appearance controls
  *
  * Background, text color, font, and screenshot image settings.
- *
- * @param props - Component props
  */
 export const AppearanceSection = ({
   screenshot,
@@ -36,14 +36,41 @@ export const AppearanceSection = ({
 }: AppearanceSectionProps) => (
   <SidebarSection title="Appearance">
     <div className="space-y-4">
-      {/* Background */}
+      <Toggle
+        label="Light / Dark Split"
+        enabled={screenshot.themeSplit}
+        onChange={(themeSplit) => onUpdateScreenshot({ themeSplit })}
+      />
+
+      {screenshot.themeSplit && (
+        <div className="space-y-3">
+          <RangeSlider
+            label="Split Angle"
+            value={screenshot.themeSplitAngle}
+            min={SLIDER_RANGES.splitAngle.min}
+            max={SLIDER_RANGES.splitAngle.max}
+            unit="°"
+            onChange={(themeSplitAngle) => onUpdateScreenshot({ themeSplitAngle })}
+          />
+          <RangeSlider
+            label="Split Offset"
+            value={screenshot.themeSplitOffset}
+            min={SLIDER_RANGES.splitOffset.min}
+            max={SLIDER_RANGES.splitOffset.max}
+            unit="%"
+            onChange={(themeSplitOffset) =>
+              onUpdateScreenshot({ themeSplitOffset })
+            }
+          />
+        </div>
+      )}
+
       <BackgroundPicker
         screenshot={screenshot}
         gradientPresets={gradientPresets}
         onUpdateScreenshot={onUpdateScreenshot}
       />
 
-      {/* Text Color */}
       <div>
         <label className="block text-xs text-gray-400 mb-1">Text Color</label>
         <input
@@ -54,7 +81,6 @@ export const AppearanceSection = ({
         />
       </div>
 
-      {/* Font Style */}
       <div>
         <label className="block text-xs text-gray-400 mb-1">Font Style</label>
         <button onClick={onOpenFontPicker} className={STYLES.dropdownButton}>
