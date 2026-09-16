@@ -14,11 +14,13 @@
 
 import { useMemo } from "react";
 import type { DeviceColor, DeviceInstance, DeviceSpec } from "../../types";
+import { isAnonymousDevice } from "../../lib/device-instances";
 import { SHADOWS } from "./constants";
 import { getFrameBackground } from "./utils";
 import { ScreenContent } from "./ScreenContent";
 import { CameraElement } from "./CameraElements";
 import { IPhoneButtons, SamsungButtons } from "./DeviceButtons";
+import { AnonymousScreen } from "./AnonymousScreen";
 
 interface DeviceFrameProps {
   /** Device instance data containing the image and metadata */
@@ -49,6 +51,7 @@ export const DeviceFrame = ({
   // Device type detection
   const isSamsungDevice = selectedDevice.id.startsWith("samsung-");
   const isSamsungTablet = selectedDevice.id.includes("tab");
+  const isAnonymous = isAnonymousDevice(selectedDevice.id);
 
   // Memoized styles for performance
   const frameStyle = useMemo(
@@ -70,6 +73,10 @@ export const DeviceFrame = ({
     }),
     [selectedDevice.frameRadius.inner],
   );
+
+  if (isAnonymous) {
+    return <AnonymousScreen device={device} selectedDevice={selectedDevice} />;
+  }
 
   return (
     <div className="relative w-full shadow-2xl" style={frameStyle}>

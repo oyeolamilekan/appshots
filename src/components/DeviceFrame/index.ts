@@ -30,6 +30,7 @@ export { DeviceFrame3D } from "./DeviceFrame3D";
 
 // Sub-components (for advanced customization)
 export { ScreenContent } from "./ScreenContent";
+export { AnonymousScreen } from "./AnonymousScreen";
 export {
   CameraElement,
   DynamicIsland,

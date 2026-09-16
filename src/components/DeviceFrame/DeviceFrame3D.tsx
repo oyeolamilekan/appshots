@@ -11,11 +11,13 @@
 
 import { useMemo } from "react";
 import type { DeviceColor, DeviceInstance, DeviceSpec } from "../../types";
+import { isAnonymousDevice } from "../../lib/device-instances";
 import { SHADOWS } from "./constants";
 import { getFrameBackground } from "./utils";
 import { ScreenContent } from "./ScreenContent";
 import { CameraElement } from "./CameraElements";
 import { IPhoneButtons, SamsungButtons } from "./DeviceButtons";
+import { AnonymousScreen } from "./AnonymousScreen";
 
 interface DeviceFrame3DProps {
   device: DeviceInstance;
@@ -43,6 +45,7 @@ export const DeviceFrame3D = ({
 }: DeviceFrame3DProps) => {
   const isSamsungDevice = selectedDevice.id.startsWith("samsung-");
   const isSamsungTablet = selectedDevice.id.includes("tab");
+  const isAnonymous = isAnonymousDevice(selectedDevice.id);
 
   const frameBackground = useMemo(
     () => getFrameBackground(selectedColor),
@@ -90,6 +93,20 @@ export const DeviceFrame3D = ({
       };
     });
   }, [selectedDevice.frameRadius.outer, frameBackground]);
+
+  if (isAnonymous) {
+    return (
+      <div
+        className="relative w-full"
+        style={{
+          transformStyle: "preserve-3d",
+          aspectRatio: `${selectedDevice.width} / ${selectedDevice.height}`,
+        }}
+      >
+        <AnonymousScreen device={device} selectedDevice={selectedDevice} />
+      </div>
+    );
+  }
 
   return (
     <div

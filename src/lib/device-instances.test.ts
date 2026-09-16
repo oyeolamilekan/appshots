@@ -3,6 +3,8 @@ import {
   DEFAULT_DEVICE_SHADOW,
   createDeviceInstance,
   ensureDeviceInstances,
+  getDeviceSpecById,
+  isAnonymousDevice,
 } from "./device-instances";
 
 describe("createDeviceInstance", () => {
@@ -103,5 +105,39 @@ describe("ensureDeviceInstances", () => {
       y: 28,
     });
     expect(activeDeviceId).toBe("device-a");
+  });
+});
+
+describe("anonymous device", () => {
+  it("recognizes the anonymous device id", () => {
+    expect(isAnonymousDevice("anonymous")).toBe(true);
+    expect(isAnonymousDevice("iphone-15-pro-max")).toBe(false);
+  });
+
+  it("resolves the anonymous spec with a dummy color", () => {
+    const spec = getDeviceSpecById("anonymous");
+
+    expect(spec).toMatchObject({
+      id: "anonymous",
+      label: "Anonymous",
+      width: 1290,
+      height: 2796,
+      hasIsland: false,
+      notchWidth: 0,
+      notchHeight: 0,
+      frameRadius: { outer: "12.5%/5.8%", inner: "12.5%/5.8%" },
+    });
+    expect(spec.colors).toEqual([
+      expect.objectContaining({ id: "none", frame: "transparent" }),
+    ]);
+  });
+
+  it("creates an anonymous device instance with the dummy color", () => {
+    const device = createDeviceInstance({ deviceId: "anonymous" });
+
+    expect(device).toMatchObject({
+      deviceId: "anonymous",
+      colorId: "none",
+    });
   });
 });

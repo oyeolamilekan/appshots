@@ -30,8 +30,16 @@ export const DEFAULT_DEVICE_SHADOW: ShadowConfig = {
   offsetY: 25,
 };
 
+export const ANONYMOUS_DEVICE_ID = "anonymous";
+export const DEFAULT_DEVICE_ID = "iphone-15-pro-max";
+
+export const isAnonymousDevice = (deviceId: string): boolean =>
+  deviceId === ANONYMOUS_DEVICE_ID;
+
 export const getDeviceSpecById = (deviceId: string): DeviceSpec =>
-  devices.find((device) => device.id === deviceId) ?? devices[0];
+  devices.find((device) => device.id === deviceId) ??
+  devices.find((device) => device.id === DEFAULT_DEVICE_ID) ??
+  devices[0];
 
 export const getDeviceColorById = (
   deviceId: string,
@@ -44,7 +52,7 @@ export const getDeviceColorById = (
 export const createDeviceInstance = (
   overrides: Partial<DeviceInstance> = {},
 ): DeviceInstance => {
-  const defaultDevice = getDeviceSpecById(overrides.deviceId ?? devices[0].id);
+  const defaultDevice = getDeviceSpecById(overrides.deviceId ?? DEFAULT_DEVICE_ID);
   const defaultColor = getDeviceColorById(
     defaultDevice.id,
     overrides.colorId ?? defaultDevice.colors[0].id,
@@ -88,8 +96,8 @@ const isDeviceInstance = (value: unknown): value is Partial<DeviceInstance> =>
 
 export const ensureDeviceInstances = (
   screenshot: LegacyDeviceFields,
-  fallbackDeviceId: string = devices[0].id,
-  fallbackColorId: string = devices[0].colors[0].id,
+  fallbackDeviceId: string = DEFAULT_DEVICE_ID,
+  fallbackColorId: string = getDeviceSpecById(DEFAULT_DEVICE_ID).colors[0].id,
 ): { devices: DeviceInstance[]; activeDeviceId: string } => {
   const fallbackDevice = getDeviceSpecById(fallbackDeviceId);
   const fallbackColor = getDeviceColorById(fallbackDevice.id, fallbackColorId);

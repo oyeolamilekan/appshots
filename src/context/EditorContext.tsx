@@ -18,11 +18,12 @@ import type {
   Project,
   SelectedElement,
 } from "../types";
-import { devices, exportSizes, gradientPresets } from "../constants";
+import { exportSizes, gradientPresets } from "../constants";
 import { exportScreenshots } from "../lib/export-utils";
 import {
   cloneDeviceInstance,
   createDeviceInstance,
+  DEFAULT_DEVICE_ID,
   ensureDeviceInstances,
   getDeviceColorById,
   getDeviceSpecById,
@@ -137,8 +138,8 @@ type LegacyScreenshotFields = {
 
 // Default screenshot for new editors
 const createDefaultScreenshot = (
-  defaultDeviceId: string = devices[0].id,
-  defaultColorId: string = devices[0].colors[0].id,
+  defaultDeviceId: string = DEFAULT_DEVICE_ID,
+  defaultColorId: string = getDeviceSpecById(DEFAULT_DEVICE_ID).colors[0].id,
 ): Screenshot => {
   const defaultDevice = createDeviceInstance({
     deviceId: defaultDeviceId,
@@ -200,7 +201,7 @@ const normalizeScreenshot = (
 };
 
 const normalizeProject = (project: Project): Project => {
-  const fallbackDeviceId = project.selectedDeviceId ?? devices[0].id;
+  const fallbackDeviceId = project.selectedDeviceId ?? DEFAULT_DEVICE_ID;
   const fallbackColorId =
     project.selectedColorId ?? getDeviceSpecById(fallbackDeviceId).colors[0].id;
   const normalizedScreenshots = project.screenshots.map((screenshot) =>
@@ -220,8 +221,8 @@ const normalizeProject = (project: Project): Project => {
 
 // Create a default project
 const createDefaultProject = (name: string = "My Project"): Project => {
-  const defaultDeviceId = devices[0].id;
-  const defaultColorId = devices[0].colors[0].id;
+  const defaultDeviceId = DEFAULT_DEVICE_ID;
+  const defaultColorId = getDeviceSpecById(DEFAULT_DEVICE_ID).colors[0].id;
   const defaultScreenshot = createDefaultScreenshot(defaultDeviceId, defaultColorId);
   return {
     id: generateId(),

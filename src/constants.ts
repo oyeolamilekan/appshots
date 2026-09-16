@@ -4,6 +4,26 @@ export const GITHUB_REPO_URL = "https://github.com/oyeolamilekan/appshots";
 
 export const devices: DeviceSpec[] = [
   {
+    id: "anonymous",
+    label: "Anonymous",
+    width: 1290,
+    height: 2796,
+    screenInset: { top: 0, right: 0, bottom: 0, left: 0 },
+    cornerRadius: 110,
+    frameRadius: { outer: "12.5%/5.8%", inner: "12.5%/5.8%" },
+    notchWidth: 0,
+    notchHeight: 0,
+    hasIsland: false,
+    colors: [
+      {
+        id: "none",
+        label: "None",
+        frame: "transparent",
+        screen: "#000",
+      },
+    ],
+  },
+  {
     id: "iphone-15-pro-max",
     label: "iPhone 15 Pro Max",
     width: 1290,

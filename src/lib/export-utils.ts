@@ -7,7 +7,7 @@ import type {
 } from "../types";
 import { gradientPresets } from "../constants";
 import { drawRichText } from "./rich-text-canvas";
-import { getDeviceColorById, getDeviceSpecById } from "./device-instances";
+import { getDeviceColorById, getDeviceSpecById, isAnonymousDevice } from "./device-instances";
 import { getRenderableDevicesForScreenshot } from "./device-overflow";
 import JSZip from "jszip";
 
@@ -246,6 +246,42 @@ const drawPerspectiveImage = (
 };
 
 /**
+ * Draw a rounded screen (placeholder + optional screenshot) with no hardware chrome.
+ */
+const drawAnonymousScreen = async (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  screenshotSrc: string | null,
+) => {
+  ctx.fillStyle = "#1c1c1e";
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, radius);
+  ctx.fill();
+
+  if (!screenshotSrc) return;
+
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  await new Promise<void>((resolve) => {
+    img.onload = () => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, radius);
+      ctx.clip();
+      ctx.drawImage(img, x, y, width, height);
+      ctx.restore();
+      resolve();
+    };
+    img.onerror = () => resolve();
+    img.src = screenshotSrc;
+  });
+};
+
+/**
  * Render the flat device (frame, screen, buttons, camera) to an offscreen canvas.
  */
 const renderDeviceToOffscreen = async (
@@ -268,6 +304,11 @@ const renderDeviceToOffscreen = async (
   const dY = 0;
   const dW = deviceWidthPx;
   const dH = deviceHeightPx;
+
+  if (isAnonymousDevice(selectedDevice.id)) {
+    await drawAnonymousScreen(ctx, dX, dY, dW, dH, frameRadius, screenshotSrc);
+    return offscreen;
+  }
 
   // --- Draw frame ---
   ctx.save();
@@ -426,7 +467,8 @@ const drawDeviceInstance = async (
   const cornerRadiusX = deviceWidthPx * outerRadiusXPct;
   const cornerRadiusY = deviceHeightPx * outerRadiusYPct;
   const frameRadius = Math.min(cornerRadiusX, cornerRadiusY);
-  const bezelThickness = deviceWidthPx * 0.012;
+  const isAnonymous = isAnonymousDevice(selectedDevice.id);
+  const bezelThickness = isAnonymous ? 0 : deviceWidthPx * 0.012;
   const isSamsungDevice = selectedDevice.id.startsWith("samsung-");
 
   if (device.style === "3d") {
@@ -453,6 +495,59 @@ const drawDeviceInstance = async (
       scaleX,
       isSamsungDevice,
     );
+
+    if (isAnonymous) {
+      if (device.shadow?.enabled) {
+        ctx.save();
+        ctx.shadowColor = device.shadow.color;
+        ctx.shadowBlur = device.shadow.blur * scaleX;
+        ctx.shadowOffsetX = device.shadow.offsetX * scaleX;
+        ctx.shadowOffsetY = device.shadow.offsetY * scaleX;
+        ctx.fillStyle = "rgba(0,0,0,0.01)";
+        traceProjectedRoundedRect(
+          ctx,
+          halfW,
+          halfH,
+          frameRadius,
+          0,
+          ryRad,
+          rxRad,
+          perspective,
+          deviceCenterX,
+          deviceCenterY,
+        );
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.save();
+      traceProjectedRoundedRect(
+        ctx,
+        halfW,
+        halfH,
+        frameRadius,
+        0,
+        ryRad,
+        rxRad,
+        perspective,
+        deviceCenterX,
+        deviceCenterY,
+      );
+      ctx.clip();
+      const corners = getProjectedCorners(
+        halfW,
+        halfH,
+        0,
+        ryRad,
+        rxRad,
+        perspective,
+        deviceCenterX,
+        deviceCenterY,
+      );
+      drawPerspectiveImage(ctx, offscreen, corners, 40, 60);
+      ctx.restore();
+      return;
+    }
 
     const SLICE_COUNT = 40;
     const halfEdge = edgeDepth / 2;
@@ -667,6 +762,28 @@ const drawDeviceInstance = async (
   ctx.translate(deviceCenterX, deviceCenterY);
   ctx.rotate((device.rotation * Math.PI) / 180);
   ctx.translate(-deviceCenterX, -deviceCenterY);
+
+  if (isAnonymous) {
+    ctx.save();
+    if (device.shadow?.enabled) {
+      ctx.shadowColor = device.shadow.color;
+      ctx.shadowBlur = device.shadow.blur * scaleX;
+      ctx.shadowOffsetX = device.shadow.offsetX * scaleX;
+      ctx.shadowOffsetY = device.shadow.offsetY * scaleX;
+    }
+    await drawAnonymousScreen(
+      ctx,
+      deviceX,
+      deviceY,
+      deviceWidthPx,
+      deviceHeightPx,
+      frameRadius,
+      device.screenshotSrc,
+    );
+    ctx.restore();
+    ctx.restore();
+    return;
+  }
 
   const btnWidth = deviceWidthPx * 0.008;
   const btnRadius = 2 * scaleX;

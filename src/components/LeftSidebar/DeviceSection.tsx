@@ -5,6 +5,7 @@
  */
 
 import type { DeviceSpec } from "../../types";
+import { isAnonymousDevice } from "../../lib/device-instances";
 import { SidebarSection } from "./SidebarSection";
 import { SelectionButton } from "./SelectionButton";
 import { ColorButton } from "./ColorButton";
@@ -64,20 +65,21 @@ export const DeviceSection = ({
       ))}
     </div>
 
-    {/* Color picker */}
-    <div className="mt-3">
-      <p className="text-xs text-gray-400 mb-2">Color</p>
-      <div className={STYLES.colorPicker}>
-        {selectedDevice.colors.map((color) => (
-          <ColorButton
-            key={color.id}
-            color={color.frame}
-            label={color.label}
-            isSelected={selectedColorId === color.id}
-            onClick={() => onColorSelect(color.id)}
-          />
-        ))}
+    {!isAnonymousDevice(selectedDeviceId) && (
+      <div className="mt-3">
+        <p className="text-xs text-gray-400 mb-2">Color</p>
+        <div className={STYLES.colorPicker}>
+          {selectedDevice.colors.map((color) => (
+            <ColorButton
+              key={color.id}
+              color={color.frame}
+              label={color.label}
+              isSelected={selectedColorId === color.id}
+              onClick={() => onColorSelect(color.id)}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+    )}
   </SidebarSection>
 );
