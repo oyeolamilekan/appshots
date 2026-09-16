@@ -13,9 +13,10 @@ import { TextElement } from "./TextElement";
 import { DeviceContainer } from "./DeviceContainer";
 import { isElementSelected } from "./utils";
 import { Z_INDEX } from "./constants";
+import { BackgroundDecorations } from "./BackgroundDecorations";
 import {
   FULL_CANVAS_RECT,
-  getScreenshotBackgroundFill,
+  getScreenshotBackgroundLayerStyle,
   getThemeSplitClips,
 } from "../../lib/theme-split";
 
@@ -38,8 +39,6 @@ interface ScreenshotCardProps {
   subheadlineFontSize: number;
   /** Ref for preview element (only attached to active screenshot) */
   previewRef: RefObject<HTMLDivElement | null>;
-  /** Background style getter */
-  getBackgroundStyle: (screenshot: Screenshot) => string;
   /** Handler for selecting this screenshot */
   onSelect: () => void;
   /** Handler for removing this screenshot */
@@ -75,7 +74,6 @@ export const ScreenshotCard = ({
   headlineFontSize,
   subheadlineFontSize,
   previewRef,
-  getBackgroundStyle,
   onSelect,
   onRemove,
   onDeselect,
@@ -118,9 +116,9 @@ export const ScreenshotCard = ({
         isActive ? "opacity-100" : "opacity-70 hover:opacity-100"
       }`}
       style={{
-        background: screenshot.themeSplit
-          ? undefined
-          : getBackgroundStyle(screenshot),
+        ...(screenshot.themeSplit
+          ? {}
+          : getScreenshotBackgroundLayerStyle(screenshot, "light")),
         aspectRatio: `${exportSize.width}/${exportSize.height}`,
         boxShadow: isActive
           ? "inset 0 0 0 2px rgba(255, 255, 255, 0.95)"
@@ -132,18 +130,34 @@ export const ScreenshotCard = ({
           <div
             className="absolute inset-0"
             style={{
-              background: getScreenshotBackgroundFill(screenshot, "light"),
+              ...getScreenshotBackgroundLayerStyle(screenshot, "light"),
               clipPath: backgroundClips.light,
             }}
           />
           <div
             className="absolute inset-0"
             style={{
-              background: getScreenshotBackgroundFill(screenshot, "dark"),
+              ...getScreenshotBackgroundLayerStyle(screenshot, "dark"),
               clipPath: backgroundClips.dark,
             }}
           />
         </>
+      )}
+      {screenshot.themeSplit && backgroundClips ? (
+        <>
+          <BackgroundDecorations
+            screenshot={screenshot}
+            side="light"
+            clipPath={backgroundClips.light}
+          />
+          <BackgroundDecorations
+            screenshot={screenshot}
+            side="dark"
+            clipPath={backgroundClips.dark}
+          />
+        </>
+      ) : (
+        <BackgroundDecorations screenshot={screenshot} side="light" />
       )}
       {/* Remove button */}
       {canRemove && <RemoveButton onRemove={onRemove} />}

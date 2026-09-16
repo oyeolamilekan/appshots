@@ -38,6 +38,7 @@ export { RangeSlider } from "./RangeSlider";
 export { Toggle } from "./Toggle";
 export { ShadowControls } from "./ShadowControls";
 export { BackgroundPicker } from "./BackgroundPicker";
+export { DecorationPicker } from "./DecorationPicker";
 export { OverlayImageItem } from "./OverlayImageItem";
 export { OverlayImageProperties } from "./OverlayImageProperties";
 

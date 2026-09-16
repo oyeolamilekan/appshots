@@ -35,7 +35,6 @@ export const CanvasPreview = () => {
     removeScreenshot,
     handleElementMouseDown,
     handleElementMouseUp,
-    getBackgroundStyle,
     addScreenshot,
     previewRef,
     canvasContainerRef,
@@ -84,7 +83,6 @@ export const CanvasPreview = () => {
                 headlineFontSize={headlineFontSize}
                 subheadlineFontSize={subheadlineFontSize}
                 previewRef={previewRef}
-                getBackgroundStyle={getBackgroundStyle}
                 onSelect={() => {
                   if (activeScreenshotId !== screenshot.id) {
                     setActiveScreenshotId(screenshot.id);

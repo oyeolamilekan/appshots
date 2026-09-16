@@ -34,6 +34,10 @@ import {
   clearPersistedState,
 } from "../lib/useLocalStorage";
 import {
+  DEFAULT_DECORATION_OPACITY,
+  DEFAULT_DECORATION_SCALE,
+} from "../lib/background-decorations";
+import {
   DEFAULT_BACKGROUND_COLOR_DARK,
   DEFAULT_THEME_SPLIT_ANGLE,
   DEFAULT_THEME_SPLIT_OFFSET,
@@ -166,9 +170,16 @@ const createDefaultScreenshot = (
     backgroundColorDark: DEFAULT_BACKGROUND_COLOR_DARK,
     backgroundModeDark: "solid",
     gradientPresetIdDark: null,
+    backgroundImageSrc: null,
+    backgroundImageSrcDark: null,
     themeSplit: false,
     themeSplitAngle: DEFAULT_THEME_SPLIT_ANGLE,
     themeSplitOffset: DEFAULT_THEME_SPLIT_OFFSET,
+    decorationPresetId: null,
+    decorationOpacity: DEFAULT_DECORATION_OPACITY,
+    decorationScale: DEFAULT_DECORATION_SCALE,
+    decorationColor: null,
+    decorationColorDark: null,
     textColor: "#ffffff",
     headlineX: 50,
     headlineY: 10,
@@ -215,10 +226,24 @@ const normalizeScreenshot = (
       screenshot.backgroundModeDark ?? baseScreenshot.backgroundModeDark,
     gradientPresetIdDark:
       screenshot.gradientPresetIdDark ?? baseScreenshot.gradientPresetIdDark,
+    backgroundImageSrc:
+      screenshot.backgroundImageSrc ?? baseScreenshot.backgroundImageSrc,
+    backgroundImageSrcDark:
+      screenshot.backgroundImageSrcDark ?? baseScreenshot.backgroundImageSrcDark,
     themeSplit: screenshot.themeSplit ?? baseScreenshot.themeSplit,
     themeSplitAngle: screenshot.themeSplitAngle ?? baseScreenshot.themeSplitAngle,
     themeSplitOffset:
       screenshot.themeSplitOffset ?? baseScreenshot.themeSplitOffset,
+    decorationPresetId:
+      screenshot.decorationPresetId ?? baseScreenshot.decorationPresetId,
+    decorationOpacity:
+      screenshot.decorationOpacity ?? baseScreenshot.decorationOpacity,
+    decorationScale:
+      screenshot.decorationScale ?? baseScreenshot.decorationScale,
+    decorationColor:
+      screenshot.decorationColor ?? baseScreenshot.decorationColor,
+    decorationColorDark:
+      screenshot.decorationColorDark ?? baseScreenshot.decorationColorDark,
     overlayImages: screenshot.overlayImages ?? [],
     devices: deviceInstances,
     activeDeviceId,
@@ -540,9 +565,16 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
       backgroundColorDark: activeScreenshot.backgroundColorDark,
       backgroundModeDark: activeScreenshot.backgroundModeDark,
       gradientPresetIdDark: activeScreenshot.gradientPresetIdDark,
+      backgroundImageSrc: activeScreenshot.backgroundImageSrc,
+      backgroundImageSrcDark: activeScreenshot.backgroundImageSrcDark,
       themeSplit: activeScreenshot.themeSplit,
       themeSplitAngle: activeScreenshot.themeSplitAngle,
       themeSplitOffset: activeScreenshot.themeSplitOffset,
+      decorationPresetId: activeScreenshot.decorationPresetId,
+      decorationOpacity: activeScreenshot.decorationOpacity,
+      decorationScale: activeScreenshot.decorationScale,
+      decorationColor: activeScreenshot.decorationColor,
+      decorationColorDark: activeScreenshot.decorationColorDark,
       textColor: activeScreenshot.textColor,
       headlineX: 50,
       headlineY: 10,

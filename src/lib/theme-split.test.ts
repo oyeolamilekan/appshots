@@ -5,7 +5,9 @@ import {
   DEFAULT_THEME_SPLIT_OFFSET,
   FULL_CANVAS_RECT,
   formatClipPolygon,
+  getCoverSourceRect,
   getDeviceScreenRect,
+  getScreenshotBackgroundLayerStyle,
   getSplitClipPoints,
   isOnSplitSide,
   signedSplitDistance,
@@ -135,5 +137,62 @@ describe("getDeviceScreenRect", () => {
 
     expect(screenPoints).not.toEqual(canvasPoints);
     expect(Math.max(...screenPoints.map((point) => point.x))).toBeGreaterThan(50);
+  });
+});
+
+describe("getCoverSourceRect", () => {
+  it("crops the sides of a wide image to cover a portrait canvas", () => {
+    const rect = getCoverSourceRect(2000, 1000, 100, 200);
+    expect(rect.sy).toBe(0);
+    expect(rect.sh).toBe(1000);
+    expect(rect.sw).toBe(500);
+    expect(rect.sx).toBe(750);
+  });
+
+  it("crops the top and bottom of a tall image to cover a landscape canvas", () => {
+    const rect = getCoverSourceRect(1000, 2000, 200, 100);
+    expect(rect.sx).toBe(0);
+    expect(rect.sw).toBe(1000);
+    expect(rect.sh).toBe(500);
+    expect(rect.sy).toBe(750);
+  });
+});
+
+describe("getScreenshotBackgroundLayerStyle", () => {
+  it("uses cover image styles in image mode", () => {
+    const style = getScreenshotBackgroundLayerStyle(
+      {
+        backgroundMode: "image",
+        backgroundImageSrc: "data:image/png;base64,abc",
+        backgroundModeDark: "solid",
+        backgroundImageSrcDark: null,
+        backgroundColor: "#d4f0e8",
+        backgroundColorDark: "#0b1220",
+        gradientPresetId: null,
+        gradientPresetIdDark: null,
+      } as Parameters<typeof getScreenshotBackgroundLayerStyle>[0],
+    );
+
+    expect(style.backgroundImage).toBe('url("data:image/png;base64,abc")');
+    expect(style.backgroundSize).toBe("cover");
+    expect(style.background).toBeUndefined();
+  });
+
+  it("falls back to the solid color when image mode has no source", () => {
+    const style = getScreenshotBackgroundLayerStyle(
+      {
+        backgroundMode: "image",
+        backgroundImageSrc: null,
+        backgroundModeDark: "solid",
+        backgroundImageSrcDark: null,
+        backgroundColor: "#d4f0e8",
+        backgroundColorDark: "#0b1220",
+        gradientPresetId: null,
+        gradientPresetIdDark: null,
+      } as Parameters<typeof getScreenshotBackgroundLayerStyle>[0],
+    );
+
+    expect(style.background).toBe("#d4f0e8");
+    expect(style.backgroundImage).toBeUndefined();
   });
 });

@@ -8,6 +8,7 @@ import { ChevronDown } from "lucide-react";
 import type { Screenshot, GradientPreset } from "../../types";
 import { SidebarSection } from "./SidebarSection";
 import { BackgroundPicker } from "./BackgroundPicker";
+import { DecorationPicker } from "./DecorationPicker";
 import { Toggle } from "./Toggle";
 import { RangeSlider } from "./RangeSlider";
 import { SLIDER_RANGES, STYLES } from "./constants";
@@ -68,6 +69,11 @@ export const AppearanceSection = ({
       <BackgroundPicker
         screenshot={screenshot}
         gradientPresets={gradientPresets}
+        onUpdateScreenshot={onUpdateScreenshot}
+      />
+
+      <DecorationPicker
+        screenshot={screenshot}
         onUpdateScreenshot={onUpdateScreenshot}
       />
 

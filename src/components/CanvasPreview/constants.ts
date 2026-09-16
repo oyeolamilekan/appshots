@@ -8,6 +8,8 @@
  * Z-index layers for proper element stacking order
  */
 export const Z_INDEX = {
+  /** Background blob/wave decorations */
+  decorations: 1,
   /** Overlay images behind device */
   behindDevice: 10,
   /** Device frame */

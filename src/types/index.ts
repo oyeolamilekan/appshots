@@ -60,6 +60,8 @@ export type DeviceStyle = "flat" | "3d";
 
 export type BackgroundMode = "solid" | "gradient" | "image";
 
+export type DecorationPresetId = "blobs" | "waves";
+
 export type DeviceInstance = {
   id: string;
   deviceId: string;
@@ -86,9 +88,16 @@ export type Screenshot = {
   backgroundColorDark: string;
   backgroundModeDark: BackgroundMode;
   gradientPresetIdDark: string | null;
+  backgroundImageSrc: string | null;
+  backgroundImageSrcDark: string | null;
   themeSplit: boolean;
   themeSplitAngle: number;
   themeSplitOffset: number;
+  decorationPresetId: DecorationPresetId | null;
+  decorationOpacity: number;
+  decorationScale: number;
+  decorationColor: string | null;
+  decorationColorDark: string | null;
   textColor: string;
   headlineX: number;
   headlineY: number;

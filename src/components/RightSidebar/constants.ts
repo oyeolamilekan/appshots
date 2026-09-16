@@ -120,4 +120,6 @@ export const SLIDER_RANGES = {
   device3dRotateX: { min: -30, max: 30 },
   splitAngle: { min: -60, max: 60 },
   splitOffset: { min: 10, max: 90 },
+  decorationOpacity: { min: 0, max: 100 },
+  decorationScale: { min: 50, max: 150 },
 } as const;

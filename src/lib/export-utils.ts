@@ -9,9 +9,12 @@ import type {
 import { gradientPresets } from "../constants";
 import { drawRichText } from "./rich-text-canvas";
 import { ANONYMOUS_TOP_CROP, getAnonymousImageSourceRect, getDeviceColorById, getDeviceSpecById, isAnonymousDevice } from "./device-instances";
+import { drawBackgroundDecorations } from "./background-decorations";
 import { getRenderableDevicesForScreenshot } from "./device-overflow";
 import {
+  getCoverSourceRect,
   getDeviceScreenRect,
+  getScreenshotBackgroundImageSrc,
   getSplitClipPoints,
   getSplitHairlinePoints,
   tracePercentPolygon,
@@ -92,12 +95,28 @@ const loadCanvasImage = (src: string): Promise<HTMLImageElement | null> =>
     img.src = src;
   });
 
-const applyBackgroundFill = (
+const drawCoverImage = (
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  destWidth: number,
+  destHeight: number,
+) => {
+  const { sx, sy, sw, sh } = getCoverSourceRect(
+    img.naturalWidth,
+    img.naturalHeight,
+    destWidth,
+    destHeight,
+  );
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, destWidth, destHeight);
+};
+
+const applyBackgroundFill = async (
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   mode: BackgroundMode,
   color: string,
   gradientPresetId: string | null,
+  imageSrc: string | null,
 ) => {
   if (mode === "gradient") {
     const preset =
@@ -107,18 +126,28 @@ const applyBackgroundFill = (
     gradient.addColorStop(0, preset.from);
     gradient.addColorStop(1, preset.to);
     ctx.fillStyle = gradient;
-  } else {
-    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    return;
   }
+
+  if (mode === "image" && imageSrc) {
+    const img = await loadCanvasImage(imageSrc);
+    if (img) {
+      drawCoverImage(ctx, img, canvas.width, canvas.height);
+      return;
+    }
+  }
+
+  ctx.fillStyle = color;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 };
 
-const fillScreenshotBackground = (
+const fillScreenshotBackground = async (
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   screenshot: Screenshot,
 ) => {
-  const fillSide = (side: "light" | "dark") => {
+  const fillSide = async (side: "light" | "dark") => {
     const mode =
       side === "dark" ? screenshot.backgroundModeDark : screenshot.backgroundMode;
     const color =
@@ -127,6 +156,7 @@ const fillScreenshotBackground = (
       side === "dark"
         ? screenshot.gradientPresetIdDark
         : screenshot.gradientPresetId;
+    const imageSrc = getScreenshotBackgroundImageSrc(screenshot, side);
 
     ctx.save();
     if (screenshot.themeSplit) {
@@ -139,13 +169,13 @@ const fillScreenshotBackground = (
       tracePercentPolygon(ctx, points, 0, 0, canvas.width, canvas.height);
       ctx.clip();
     }
-    applyBackgroundFill(ctx, canvas, mode, color, presetId);
+    await applyBackgroundFill(ctx, canvas, mode, color, presetId, imageSrc);
     ctx.restore();
   };
 
-  fillSide("light");
+  await fillSide("light");
   if (screenshot.themeSplit) {
-    fillSide("dark");
+    await fillSide("dark");
   }
 };
 
@@ -1229,7 +1259,8 @@ export const exportScreenshots = async ({
     // Account for padding (4px * 2) in preview to match text wrapping
     const paddingX = 8 * scaleX;
 
-    fillScreenshotBackground(ctx, canvas, screenshot);
+    await fillScreenshotBackground(ctx, canvas, screenshot);
+    drawBackgroundDecorations(ctx, canvas, screenshot);
 
     // Helper to draw overlay images
     const drawOverlayImages = async (layer: "behind" | "front") => {

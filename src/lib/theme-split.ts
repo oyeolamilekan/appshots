@@ -318,6 +318,60 @@ export const getScreenshotBackgroundFill = (
   );
 };
 
+export const getScreenshotBackgroundImageSrc = (
+  screenshot: Screenshot,
+  side: SplitSide = "light",
+): string | null => {
+  if (side === "dark") {
+    return screenshot.backgroundImageSrcDark ?? screenshot.backgroundImageSrc;
+  }
+  return screenshot.backgroundImageSrc;
+};
+
+export type BackgroundLayerStyle = {
+  background?: string;
+  backgroundImage?: string;
+  backgroundSize?: string;
+  backgroundPosition?: string;
+  backgroundRepeat?: string;
+};
+
+export const getScreenshotBackgroundLayerStyle = (
+  screenshot: Screenshot,
+  side: SplitSide = "light",
+): BackgroundLayerStyle => {
+  const mode =
+    side === "dark" ? screenshot.backgroundModeDark : screenshot.backgroundMode;
+  const imageSrc = getScreenshotBackgroundImageSrc(screenshot, side);
+  if (mode === "image" && imageSrc) {
+    return {
+      backgroundImage: `url(${JSON.stringify(imageSrc)})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+    };
+  }
+  return {
+    background: getScreenshotBackgroundFill(screenshot, side),
+  };
+};
+
+export const getCoverSourceRect = (
+  imageWidth: number,
+  imageHeight: number,
+  destWidth: number,
+  destHeight: number,
+) => {
+  const imageAspect = imageWidth / imageHeight;
+  const destAspect = destWidth / destHeight;
+  if (imageAspect > destAspect) {
+    const sw = imageHeight * destAspect;
+    return { sx: (imageWidth - sw) / 2, sy: 0, sw, sh: imageHeight };
+  }
+  const sh = imageWidth / destAspect;
+  return { sx: 0, sy: (imageHeight - sh) / 2, sw: imageWidth, sh };
+};
+
 export const tracePercentPolygon = (
   ctx: CanvasRenderingContext2D,
   points: PercentPoint[],
