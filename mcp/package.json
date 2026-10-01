@@ -1,0 +1,30 @@
+{
+  "name": "@appshots/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server that renders App Store / Play Store screenshots with the AppShots render pipeline",
+  "type": "module",
+  "bin": {
+    "appshots-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --packages=external --outfile=dist/index.js --banner:js='#!/usr/bin/env node'",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "playwright": "^1.50.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

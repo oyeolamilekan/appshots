@@ -1,5 +1,7 @@
 {
   "include": ["**/*.ts", "**/*.tsx"],
+  /* mcp/ is its own package with its own deps and tsconfig */
+  "exclude": ["node_modules", "dist", "dist-mcp", "mcp"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

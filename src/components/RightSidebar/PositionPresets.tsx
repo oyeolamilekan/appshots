@@ -8,17 +8,16 @@
 import { useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import type { DeviceInstance } from "../../types";
+import { positionPresets } from "../../lib/position-presets";
+import type { PositionPreset } from "../../lib/position-presets";
 
 interface PositionPresetsProps {
   device: DeviceInstance;
   onUpdateDevice: (updates: Partial<DeviceInstance>) => void;
 }
 
-interface Preset {
-  id: string;
-  label: string;
+interface Preset extends PositionPreset {
   icon: React.ReactNode;
-  settings: Partial<DeviceInstance>;
 }
 
 /**
@@ -62,98 +61,26 @@ const DeviceIcon = ({
   );
 };
 
-const PRESETS: Preset[] = [
-  {
-    id: "centered",
-    label: "Centered",
-    icon: <DeviceIcon offsetY={50} scale={65} />,
-    settings: {
-      scale: 65,
-      y: 35,
-      rotation: 0,
-      style: "flat",
-    },
-  },
-  {
-    id: "bleed-bottom",
-    label: "Bleed Bottom",
-    icon: <DeviceIcon offsetY={70} scale={70} />,
-    settings: {
-      scale: 70,
-      y: 45,
-      rotation: 0,
-      style: "flat",
-    },
-  },
-  {
-    id: "bleed-top",
-    label: "Bleed Top",
-    icon: <DeviceIcon offsetY={30} scale={70} />,
-    settings: {
-      scale: 70,
-      y: 15,
-      rotation: 0,
-      style: "flat",
-    },
-  },
-  {
-    id: "float-center",
-    label: "Float Center",
-    icon: <DeviceIcon offsetY={50} scale={55} />,
-    settings: {
-      scale: 55,
-      y: 30,
-      rotation: 0,
-      style: "flat",
-    },
-  },
-  {
-    id: "tilt-left",
-    label: "Tilt Left",
-    icon: <DeviceIcon rotation={-15} offsetY={50} scale={60} />,
-    settings: {
-      scale: 60,
-      y: 35,
-      rotation: -15,
-      style: "flat",
-    },
-  },
-  {
-    id: "tilt-right",
-    label: "Tilt Right",
-    icon: <DeviceIcon rotation={15} offsetY={50} scale={60} />,
-    settings: {
-      scale: 60,
-      y: 35,
-      rotation: 15,
-      style: "flat",
-    },
-  },
-  {
-    id: "perspective",
-    label: "Perspective",
-    icon: <DeviceIcon is3D rotateY={-20} offsetY={50} scale={60} />,
-    settings: {
-      scale: 60,
-      y: 35,
-      rotation: 0,
-      style: "3d",
-      rotateY: -20,
-      rotateX: 5,
-    },
-  },
-  {
-    id: "float-bottom",
-    label: "Float Bottom",
-    icon: <DeviceIcon offsetY={65} scale={50} />,
-    settings: {
-      scale: 50,
-      y: 50,
-      rotation: 0,
-      style: "flat",
-    },
-  },
-];
+/**
+ * Preset thumbnails, keyed by preset id.
+ * Settings themselves live in `src/lib/position-presets.ts` so the MCP server
+ * can share them.
+ */
+const PRESET_ICONS: Record<string, React.ReactNode> = {
+  centered: <DeviceIcon offsetY={50} scale={65} />,
+  "bleed-bottom": <DeviceIcon offsetY={70} scale={70} />,
+  "bleed-top": <DeviceIcon offsetY={30} scale={70} />,
+  "float-center": <DeviceIcon offsetY={50} scale={55} />,
+  "tilt-left": <DeviceIcon rotation={-15} offsetY={50} scale={60} />,
+  "tilt-right": <DeviceIcon rotation={15} offsetY={50} scale={60} />,
+  perspective: <DeviceIcon is3D rotateY={-20} offsetY={50} scale={60} />,
+  "float-bottom": <DeviceIcon offsetY={65} scale={50} />,
+};
+
+const PRESETS: Preset[] = positionPresets.map((preset) => ({
+  ...preset,
+  icon: PRESET_ICONS[preset.id],
+}));
 
 /**
  * PositionPresets - Quick device positioning presets

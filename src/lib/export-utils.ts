@@ -9,14 +9,21 @@ import { gradientPresets } from "../constants";
 import { drawRichText } from "./rich-text-canvas";
 import { getDeviceColorById, getDeviceSpecById } from "./device-instances";
 import { getRenderableDevicesForScreenshot } from "./device-overflow";
-import JSZip from "jszip";
 
-interface ExportOptions {
+export interface ExportOptions {
   screenshots: Screenshot[];
   exportSize: ExportSize;
   previewDimensions: { width: number; height: number };
   headlineFontSize: number;
   subheadlineFontSize: number;
+}
+
+/** A single rendered screenshot as a PNG data URL */
+export interface RenderedScreenshot {
+  /** Suggested file name, e.g. `appstore-screenshot-1.png` */
+  name: string;
+  /** PNG data URL */
+  data: string;
 }
 
 /**
@@ -48,8 +55,10 @@ const downloadFile = (dataURL: string, filename: string) => {
  * Download multiple files as ZIP
  */
 const downloadAsZip = async (files: { name: string; data: string }[]) => {
+  // Imported lazily so headless render bundles (MCP) don't pay for JSZip
+  const { default: JSZip } = await import("jszip");
   const zip = new JSZip();
-  
+
   for (const file of files) {
     const blob = dataURLtoBlob(file.data);
     zip.file(file.name, blob);
@@ -893,17 +902,29 @@ const drawDeviceInstance = async (
   ctx.restore();
 };
 
-export const exportScreenshots = async ({
+/**
+ * Renders every screenshot to a PNG data URL.
+ *
+ * This is the single source of truth for export rendering. It performs no
+ * downloads and touches no DOM outside of throwaway canvases, so it can run
+ * in the editor (see `exportScreenshots`) or in a headless page driven by the
+ * MCP server (see `src/render-entry.ts`).
+ *
+ * `previewDimensions.width` is the text-scale reference: all font sizes,
+ * shadow blurs and stroke widths are multiplied by
+ * `exportSize.width / previewDimensions.width`.
+ */
+export const renderScreenshotsToDataURLs = async ({
   screenshots,
   exportSize,
   previewDimensions,
   headlineFontSize,
   subheadlineFontSize,
-}: ExportOptions) => {
+}: ExportOptions): Promise<RenderedScreenshot[]> => {
   // Wait for fonts to be loaded before exporting
   await document.fonts.ready;
 
-  const exportedFiles: { name: string; data: string }[] = [];
+  const exportedFiles: RenderedScreenshot[] = [];
 
   for (let i = 0; i < screenshots.length; i++) {
     const screenshot = screenshots[i];
@@ -1043,6 +1064,17 @@ export const exportScreenshots = async ({
     const dataURL = canvas.toDataURL("image/png");
     exportedFiles.push({ name: filename, data: dataURL });
   }
+
+  return exportedFiles;
+};
+
+/**
+ * Renders and downloads screenshots from the editor.
+ *
+ * Single screenshot downloads as a PNG, multiple as a ZIP.
+ */
+export const exportScreenshots = async (options: ExportOptions) => {
+  const exportedFiles = await renderScreenshotsToDataURLs(options);
 
   // Download: single file directly, multiple files as ZIP
   if (exportedFiles.length === 1) {
