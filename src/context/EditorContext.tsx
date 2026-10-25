@@ -18,7 +18,12 @@ import type {
   Project,
   SelectedElement,
 } from "../types";
-import { devices, exportSizes, gradientPresets } from "../constants";
+import {
+  devices,
+  exportSizes,
+  gradientPresets,
+  CUSTOM_EXPORT_SIZE_ID,
+} from "../constants";
 import { exportScreenshots } from "../lib/export-utils";
 import {
   cloneDeviceInstance,
@@ -58,6 +63,8 @@ interface EditorContextType {
   setSelectedColorId: (id: string) => void;
   exportSizeId: string;
   setExportSizeId: (id: string) => void;
+  customExportSize: { width: number; height: number };
+  setCustomExportSize: (size: { width: number; height: number }) => void;
   screenshots: Screenshot[];
   setScreenshots: (screenshots: Screenshot[]) => void;
   activeScreenshotId: string;
@@ -211,12 +218,18 @@ const normalizeProject = (project: Project): Project => {
     ...project,
     selectedDeviceId: fallbackDeviceId,
     selectedColorId: fallbackColorId,
+    customExportSize: project.customExportSize ?? getDefaultCustomExportSize(),
     screenshots: normalizedScreenshots,
     activeScreenshotId:
       normalizedScreenshots.find((s) => s.id === project.activeScreenshotId)?.id ??
       normalizedScreenshots[0].id,
   };
 };
+
+const getDefaultCustomExportSize = () => ({
+  width: exportSizes[0].width,
+  height: exportSizes[0].height,
+});
 
 // Create a default project
 const createDefaultProject = (name: string = "My Project"): Project => {
@@ -232,6 +245,7 @@ const createDefaultProject = (name: string = "My Project"): Project => {
     selectedDeviceId: defaultDeviceId,
     selectedColorId: defaultColorId,
     exportSizeId: exportSizes[0].id,
+    customExportSize: getDefaultCustomExportSize(),
     activeScreenshotId: defaultScreenshot.id,
     headlineFontSize: 72,
     subheadlineFontSize: 42,
@@ -281,6 +295,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const [exportSizeId, setExportSizeIdState] = useState(
     activeProject.exportSizeId,
   );
+  const [customExportSize, setCustomExportSizeState] = useState(
+    activeProject.customExportSize,
+  );
   const [screenshots, setScreenshotsState] = useState<Screenshot[]>(
     activeProject.screenshots,
   );
@@ -327,6 +344,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
               selectedDeviceId,
               selectedColorId,
               exportSizeId,
+              customExportSize,
               activeScreenshotId,
               headlineFontSize,
               subheadlineFontSize,
@@ -341,6 +359,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     selectedDeviceId,
     selectedColorId,
     exportSizeId,
+    customExportSize,
     activeScreenshotId,
     headlineFontSize,
     subheadlineFontSize,
@@ -397,6 +416,9 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
   const setExportSizeId = (id: string) => {
     setExportSizeIdState(id);
   };
+  const setCustomExportSize = (size: { width: number; height: number }) => {
+    setCustomExportSizeState(size);
+  };
   const setScreenshots = (newScreenshots: Screenshot[]) => {
     setScreenshotsState(newScreenshots);
   };
@@ -448,6 +470,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setSelectedDeviceIdState(project.selectedDeviceId);
     setSelectedColorIdState(project.selectedColorId);
     setExportSizeIdState(project.exportSizeId);
+    setCustomExportSizeState(project.customExportSize);
     setScreenshotsState(project.screenshots);
     setActiveScreenshotIdState(project.activeScreenshotId);
     setHeadlineFontSizeState(project.headlineFontSize);
@@ -465,8 +488,10 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     activeScreenshot.devices.find(
       (device) => device.id === activeScreenshot.activeDeviceId,
     ) || activeScreenshot.devices[0];
-  const exportSize =
-    exportSizes.find((s) => s.id === exportSizeId) || exportSizes[0];
+  const exportSize: ExportSize =
+    exportSizeId === CUSTOM_EXPORT_SIZE_ID
+      ? { id: CUSTOM_EXPORT_SIZE_ID, label: "Custom", ...customExportSize }
+      : exportSizes.find((s) => s.id === exportSizeId) || exportSizes[0];
 
   const updateScreenshotById = useCallback(
     (screenshotId: string, updates: Partial<Screenshot>) => {
@@ -974,6 +999,7 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
     setSelectedDeviceIdState(defaultProject.selectedDeviceId);
     setSelectedColorIdState(defaultProject.selectedColorId);
     setExportSizeIdState(defaultProject.exportSizeId);
+    setCustomExportSizeState(defaultProject.customExportSize);
     setScreenshotsState(defaultProject.screenshots);
     setActiveScreenshotIdState(defaultProject.activeScreenshotId);
     setHeadlineFontSizeState(defaultProject.headlineFontSize);
@@ -1004,6 +1030,8 @@ export const EditorProvider = ({ children }: { children: ReactNode }) => {
         setSelectedColorId,
         exportSizeId,
         setExportSizeId,
+        customExportSize,
+        setCustomExportSize,
         screenshots,
         setScreenshots,
         activeScreenshotId,

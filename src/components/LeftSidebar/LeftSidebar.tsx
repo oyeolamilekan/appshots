@@ -37,6 +37,8 @@ export const LeftSidebar = () => {
     selectedDevice,
     exportSizeId,
     setExportSizeId,
+    customExportSize,
+    setCustomExportSize,
     handleExport,
     screenshots,
   } = useEditor();
@@ -71,6 +73,8 @@ export const LeftSidebar = () => {
           selectedSizeId={exportSizeId}
           screenshotCount={screenshots.length}
           onSizeSelect={setExportSizeId}
+          customSize={customExportSize}
+          onCustomSizeChange={setCustomExportSize}
           onExport={handleExport}
         />
       </div>

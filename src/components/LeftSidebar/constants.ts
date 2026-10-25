@@ -48,6 +48,10 @@ export const STYLES = {
   /** Color button inactive state */
   colorButtonInactive: "border-transparent",
 
+  /** Custom size input */
+  sizeInput:
+    "w-full rounded-md bg-[#2a2a2a] px-2 py-1.5 text-sm text-gray-200 outline-none focus:ring-1 focus:ring-white/40",
+
   /** Primary action button */
   primaryButton:
     "w-full mt-3 bg-white hover:bg-neutral-200 text-black font-medium py-2.5 rounded-lg transition-colors",

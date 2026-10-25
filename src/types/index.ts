@@ -126,6 +126,8 @@ export type Project = {
   selectedColorId: string;
   /** Export size ID */
   exportSizeId: string;
+  /** Dimensions used when the custom export size is selected */
+  customExportSize: { width: number; height: number };
   /** Active screenshot ID */
   activeScreenshotId: string;
   /** Headline font size */
