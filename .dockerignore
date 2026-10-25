@@ -1,0 +1,15 @@
+.git
+.github
+node_modules
+dist
+dist-ssr
+.env
+*.local
+.vscode
+.tanstack
+.nitro
+.wrangler
+count.txt
+Dockerfile
+docker-compose.yml
+.dockerignore

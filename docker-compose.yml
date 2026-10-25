@@ -1,0 +1,10 @@
+services:
+  appshots:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: appshots:latest
+    container_name: appshots
+    restart: unless-stopped
+    ports:
+      - "${APPSHOTS_PORT:-8080}:80"
